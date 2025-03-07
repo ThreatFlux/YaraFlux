@@ -1,0 +1,19 @@
+# Development dependencies
+-r requirements.txt
+
+# Testing
+pytest>=8.0.0
+pytest-cov>=4.1.0
+
+# Linting and formatting
+black>=24.1.0
+isort>=5.13.0
+pylint>=3.0.0
+mypy>=1.8.0
+
+# Security
+bandit>=1.7.0
+safety>=3.0.0
+
+# Pre-commit hooks
+pre-commit>=3.6.0

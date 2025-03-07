@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "yaraflux-mcp-server": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "--name",
+        "yaraflux-mcp-server",
+        "--env",
+        "JWT_SECRET_KEY=your-secret-key",
+        "--env", 
+        "ADMIN_PASSWORD=your-admin-password",
+        "--env",
+        "DEBUG=true",
+        "--env",
+        "PYTHONPATH=/app",
+        "yaraflux-mcp-server:latest"
+      ],
+      "timeout": 600
+    }
+  }
+}
