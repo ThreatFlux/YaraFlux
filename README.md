@@ -15,8 +15,8 @@ A Model Context Protocol (MCP) server for YARA scanning, providing LLMs with cap
 
 ### Prerequisites
 
-- Python 3.11 or newer
-- YARA library with development headers
+- Docker
+- YARA library with development headers (only if building from source)
 - Optional: MinIO or S3-compatible storage
 
 ### Using pip
@@ -29,7 +29,7 @@ pip install yaraflux-mcp-server
 
 ```bash
 git clone https://github.com/ThreatFlux/YaraFlux.git
-cd YaraFlux/yaraflux_mcp_server
+cd YaraFlux/
 make install
 ```
 
@@ -68,10 +68,15 @@ make run
 
 ```bash
 # Build the Docker image
-make docker-build
+docker build -t yaraflux-mcp-server:latest .
 
 # Run the Docker container
-make docker-run
+docker run -i --rm \
+  --env JWT_SECRET_KEY=your-secret-key \
+  --env ADMIN_PASSWORD=your-admin-password \
+  --env DEBUG=true \
+  --env PYTHONUNBUFFERED=1 \
+  yaraflux-mcp-server:latest
 ```
 
 ### Importing YARA rules
@@ -92,38 +97,63 @@ Once the server is running, you can access the API documentation at:
 
 YaraFlux MCP Server can be easily integrated with Claude Desktop for AI-assisted YARA rule management and scanning.
 
-### Option 1: Using the MCP CLI
+### Building and Installing for Claude Desktop
 
-The easiest way to install YaraFlux in Claude Desktop is using the MCP CLI:
-
-```bash
-# Install the MCP CLI if you don't have it
-pip install "mcp[cli]"
-
-# Install YaraFlux MCP Server
-mcp install src/yaraflux_mcp_server/mcp_server.py --name "YaraFlux" \
-    -v JWT_SECRET_KEY=your-jwt-secret \
-    -v ADMIN_PASSWORD=your-admin-password
-```
-
-### Option 2: Using the Provided Script
-
-We provide a convenience script that builds the Docker image and installs the server:
+1. First, build the Docker image:
 
 ```bash
-chmod +x install_claude.sh
-./install_claude.sh
+docker build -t yaraflux-mcp-server:latest .
 ```
+
+2. Add the following configuration to your Claude Desktop config (located at `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+
+```json
+{
+  "mcpServers": {
+    "yaraflux-mcp-server": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "--env",
+        "JWT_SECRET_KEY=your-secret-key",
+        "--env",
+        "ADMIN_PASSWORD=your-admin-password",
+        "--env",
+        "DEBUG=true",
+        "--env",
+        "PYTHONUNBUFFERED=1",
+        "yaraflux-mcp-server:latest"
+      ],
+      "timeout": 1200,
+      "disabled": false,
+      "autoApprove": [
+        "scan_url",
+        "scan_data",
+        "list_yara_rules",
+        "get_yara_rule"
+      ],
+      "pipeMode": "binary"
+    }
+  }
+}
+```
+
+Make sure to replace:
+- `your-secret-key` with a secure JWT secret key
+- `your-admin-password` with a secure admin password
 
 ### Using YaraFlux with Claude
 
-Once installed, you can interact with YaraFlux through Claude using natural language:
+Once installed, you can interact with YaraFlux through Claude using the following capabilities:
 
-- "List all available YARA rules"
-- "Validate this YARA rule: [rule content]"
-- "Scan this URL for malware: https://example.com/file.txt"
-- "Create a new YARA rule to detect [pattern]"
-- "Delete the rule named 'suspicious_behavior'"
+- List YARA rules: This will display all available rules in the system
+- Get rule details: View the content and metadata of specific rules
+- Scan URLs: Analyze files from URLs using YARA rules
+- Scan data: Analyze file content directly using YARA rules
+
+These operations are auto-approved in the configuration for seamless interaction.
 
 ## Development
 
