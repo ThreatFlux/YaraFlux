@@ -39,6 +39,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
     "pytest-cov>=4.1.0",
     "black>=24.1.0",
     "isort>=5.13.0",
@@ -61,13 +62,13 @@ package-dir = {"" = "src"}
 packages = ["yaraflux_mcp_server", "yaraflux_mcp_server.routers"]
 
 [tool.black]
-line-length = 100
+line-length = 120
 target-version = ["py311", "py312", "py313"]
 include = '\.pyi?$'
 
 [tool.isort]
 profile = "black"
-line_length = 100
+line_length = 120
 
 [tool.mypy]
 python_version = "3.11"
