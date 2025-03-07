@@ -18,4 +18,5 @@ fi
 echo "PYTHONPATH: $PYTHONPATH"
 
 # Run the YaraFlux MCP server with the provided arguments
-exec python3 -m yaraflux_mcp_server "$@"
+exec  python3 -m yaraflux_mcp_server.mcp_server --transport stdio
+
