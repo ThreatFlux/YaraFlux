@@ -2,60 +2,47 @@
 
 A Model Context Protocol (MCP) server for YARA scanning, providing LLMs with capabilities to analyze files with YARA rules.
 
+## Documentation
+
+Comprehensive documentation is available in the [docs/](docs/) directory:
+
+- [Installation Guide](docs/installation.md) - Detailed setup instructions
+- [CLI Usage Guide](docs/cli.md) - Command-line interface documentation
+- [API Reference](docs/api.md) - REST API endpoints and usage
+- [YARA Rules Guide](docs/yara_rules.md) - Creating and managing YARA rules
+- [MCP Integration](docs/mcp.md) - Model Context Protocol integration details
+- [Examples](docs/examples.md) - Real-world usage examples
+
 ## Features
 
 - 🔍 YARA scanning integration with the Model Context Protocol
+- 📝 Comprehensive YARA rule management
 - 🔐 JWT authentication for secure API access
 - 🐳 Docker deployment support
 - 📦 MinIO/S3 storage option for rules, samples and results
 - 🔄 Auto-import of ThreatFlux YARA rules
 - 🌐 RESTful API for rule management and scanning
+- 🤖 Direct AI assistant integration via MCP
+- 🔍 URL and data scanning capabilities
+- 📊 Detailed scan results and analysis
 
-## Installation
+## Quick Start
 
-### Prerequisites
-
-- Docker
-- YARA library with development headers (only if building from source)
-- Optional: MinIO or S3-compatible storage
-
-### Using pip
+### Installation
 
 ```bash
+# Using pip
 pip install yaraflux-mcp-server
-```
 
-### From source
-
-```bash
+# From source
 git clone https://github.com/ThreatFlux/YaraFlux.git
 cd YaraFlux/
 make install
 ```
 
-## Configuration
+### Basic Usage
 
-Create a `.env` file based on the provided `.env.example`:
-
-```bash
-cp .env.example .env
-```
-
-Edit the `.env` file to set your configuration:
-
-```
-# Security
-JWT_SECRET_KEY=your-jwt-secret-key
-ADMIN_PASSWORD=your-secure-admin-password
-
-# Storage
-USE_MINIO=false  # Set to true to use MinIO
-```
-
-## Usage
-
-### Running the server
-
+1. Start the server:
 ```bash
 # From Python package
 yaraflux-mcp-server run
@@ -64,13 +51,31 @@ yaraflux-mcp-server run
 make run
 ```
 
-### Docker
+2. Create a YARA rule:
+```bash
+yaraflux rules create test_rule --content '
+rule test_rule {
+    meta:
+        description = "Test rule"
+    strings:
+        $test = "test" nocase
+    condition:
+        $test
+}'
+```
+
+3. Scan a file:
+```bash
+yaraflux scan url https://example.com/file.txt --rules test_rule
+```
+
+## Docker Deployment
 
 ```bash
-# Build the Docker image
+# Build the image
 docker build -t yaraflux-mcp-server:latest .
 
-# Run the Docker container
+# Run the container
 docker run -i --rm \
   --env JWT_SECRET_KEY=your-secret-key \
   --env ADMIN_PASSWORD=your-admin-password \
@@ -79,34 +84,16 @@ docker run -i --rm \
   yaraflux-mcp-server:latest
 ```
 
-### Importing YARA rules
-
-```bash
-# Import ThreatFlux YARA rules
-yaraflux-mcp-server import-rules
-```
-
-## API Documentation
-
-Once the server is running, you can access the API documentation at:
-
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
-
 ## Claude Desktop Integration
 
-YaraFlux MCP Server can be easily integrated with Claude Desktop for AI-assisted YARA rule management and scanning.
+YaraFlux can be integrated with Claude Desktop for AI-assisted YARA rule management and scanning.
 
-### Building and Installing for Claude Desktop
-
-1. First, build the Docker image:
-
+1. Build the Docker image:
 ```bash
 docker build -t yaraflux-mcp-server:latest .
 ```
 
-2. Add the following configuration to your Claude Desktop config (located at `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
-
+2. Add to Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json`):
 ```json
 {
   "mcpServers": {
@@ -140,38 +127,16 @@ docker build -t yaraflux-mcp-server:latest .
 }
 ```
 
-Make sure to replace:
-- `your-secret-key` with a secure JWT secret key
-- `your-admin-password` with a secure admin password
-
-### Using YaraFlux with Claude
-
-Once installed, you can interact with YaraFlux through Claude using the following capabilities:
-
-- List YARA rules: This will display all available rules in the system
-- Get rule details: View the content and metadata of specific rules
-- Scan URLs: Analyze files from URLs using YARA rules
-- Scan data: Analyze file content directly using YARA rules
-
-These operations are auto-approved in the configuration for seamless interaction.
-
 ## Development
 
-### Setting up the development environment
-
 ```bash
+# Set up development environment
 make dev-setup
-```
 
-### Running tests
-
-```bash
+# Run tests
 make test
-```
 
-### Checking code quality
-
-```bash
+# Code quality checks
 make lint
 make format
 make security-check
@@ -184,29 +149,27 @@ yaraflux_mcp_server/
 ├── src/
 │   └── yaraflux_mcp_server/
 │       ├── app.py                 # FastAPI application
-│       ├── auth.py                # JWT authentication and user management
-│       ├── config.py              # Configuration settings loader
-│       ├── models.py              # Pydantic models for requests/responses
+│       ├── auth.py                # JWT authentication
+│       ├── config.py              # Configuration loader
+│       ├── models.py              # Pydantic models
 │       ├── mcp_server.py          # MCP server implementation
 │       ├── run_mcp.py             # MCP server entry point
-│       ├── storage.py             # Storage abstraction (local or MinIO)
-│       ├── yara_service.py        # YARA rule management and scanning
-│       ├── __init__.py            # Package initialization
-│       ├── __main__.py            # CLI entry point
-│       └── routers/
-│           ├── auth.py            # Authentication API routes
-│           ├── rules.py           # YARA rule management API routes
-│           ├── scan.py            # YARA scanning API routes
-│           └── __init__.py
+│       ├── storage.py             # Storage abstraction
+│       ├── yara_service.py        # YARA management
+│       └── routers/               # API routes
+├── docs/                          # Documentation
 ├── tests/                         # Test suite
-├── examples/                      # Example configurations
-├── Dockerfile                     # Docker configuration
-├── install_claude.sh              # Claude Desktop installation script
-├── Makefile                       # Build automation
-├── pyproject.toml                 # Project metadata and dependencies
-├── requirements.txt               # Core dependencies
-└── requirements-dev.txt           # Development dependencies
+├── examples/                      # Examples
+└── [other configuration files]
 ```
+
+## API Documentation
+
+Interactive API documentation available at:
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+
+For detailed API documentation, see [API Reference](docs/api.md).
 
 ## License
 
