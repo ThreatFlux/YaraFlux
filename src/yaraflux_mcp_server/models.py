@@ -6,10 +6,10 @@ used by the YaraFlux MCP Server.
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Set
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field, HttpUrl, validator
+from pydantic import BaseModel, Field, HttpUrl, validator, ByteSize
 
 
 class UserRole(str, Enum):
@@ -146,3 +146,99 @@ class ErrorResponse(BaseModel):
 
     error: str
     detail: Optional[str] = None
+
+
+# File Management Models
+
+class FileInfo(BaseModel):
+    """File information model."""
+    
+    file_id: UUID = Field(default_factory=uuid4)
+    file_name: str
+    file_size: int
+    file_hash: str
+    mime_type: str = "application/octet-stream"
+    uploaded_at: datetime = Field(default_factory=datetime.utcnow)
+    uploader: Optional[str] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class FileUploadRequest(BaseModel):
+    """Model for file upload requests."""
+    
+    file_name: str
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    
+
+class FileUploadResponse(BaseModel):
+    """Model for file upload responses."""
+    
+    file_info: FileInfo
+
+
+class FileListResponse(BaseModel):
+    """Model for file list responses."""
+    
+    files: List[FileInfo]
+    total: int
+    page: int = 1
+    page_size: int = 100
+
+
+class FileStringsRequest(BaseModel):
+    """Model for file strings extraction requests."""
+    
+    min_length: int = 4
+    include_unicode: bool = True
+    include_ascii: bool = True
+    limit: Optional[int] = None
+
+
+class FileString(BaseModel):
+    """Model for an extracted string."""
+    
+    string: str
+    offset: int
+    string_type: str  # "ascii" or "unicode"
+
+
+class FileStringsResponse(BaseModel):
+    """Model for file strings extraction responses."""
+    
+    file_id: UUID
+    file_name: str
+    strings: List[FileString]
+    total_strings: int
+    min_length: int
+    include_unicode: bool
+    include_ascii: bool
+
+
+class FileHexRequest(BaseModel):
+    """Model for file hex view requests."""
+    
+    offset: int = 0
+    length: Optional[int] = None
+    bytes_per_line: int = 16
+    include_ascii: bool = True
+
+
+class FileHexResponse(BaseModel):
+    """Model for file hex view responses."""
+    
+    file_id: UUID
+    file_name: str
+    hex_content: str
+    offset: int
+    length: int
+    total_size: int
+    bytes_per_line: int
+    include_ascii: bool
+
+
+class FileDeleteResponse(BaseModel):
+    """Model for file deletion responses."""
+    
+    file_id: UUID
+    success: bool
+    message: str

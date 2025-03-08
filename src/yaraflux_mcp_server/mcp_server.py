@@ -2,18 +2,20 @@
 
 This module creates a proper MCP server that exposes YARA functionality
 to Claude Desktop following the Model Context Protocol specification.
+This version now uses the modular claude_mcp_tools package.
 """
 
 import logging
+import os
 import base64
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any
 from datetime import datetime
 from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP, Context
 
 from yaraflux_mcp_server.config import settings
-from yaraflux_mcp_server.models import YaraRuleMetadata, YaraScanResult
+from yaraflux_mcp_server.auth import init_user_db
 from yaraflux_mcp_server.yara_service import yara_service, YaraError
 from yaraflux_mcp_server.storage import get_storage_client
 
@@ -24,6 +26,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Import all tools from the modular claude_mcp_tools package
+# This will register them automatically with FastMCP
+import yaraflux_mcp_server.claude_mcp_tools
+
 # Create an MCP server
 mcp = FastMCP(
     "YaraFlux",
@@ -33,334 +39,49 @@ mcp = FastMCP(
 )
 
 
-@mcp.tool()
-def list_yara_rules(source: Optional[str] = None) -> List[Dict[str, Any]]:
-    """List available YARA rules.
-    
-    Args:
-        source: Optional source filter ("custom" or "community")
-        
-    Returns:
-        List of YARA rule metadata objects
-    """
-    try:
-        # Get rules from the YARA service
-        rules = yara_service.list_rules(source)
-        
-        # Convert to dict for serialization
-        return [rule.dict() for rule in rules]
-    except YaraError as e:
-        logger.error(f"Error listing YARA rules: {str(e)}")
-        return []
-
+# Register additional tools directly with the FastMCP instance
+# This ensures the tools are available when using FastMCP directly
 
 @mcp.tool()
-def get_yara_rule(rule_name: str, source: str = "custom") -> Dict[str, Any]:
-    """Get a YARA rule's content.
-    
-    Args:
-        rule_name: Name of the rule to get
-        source: Source of the rule ("custom" or "community")
-        
-    Returns:
-        Rule content and metadata
-    """
-    try:
-        # Get rule content
-        content = yara_service.get_rule(rule_name, source)
-        
-        # Get rule metadata
-        rules = yara_service.list_rules(source)
-        metadata = None
-        for rule in rules:
-            if rule.name == rule_name:
-                metadata = rule
-                break
-        
-        # Return content and metadata
-        return {
-            "name": rule_name,
-            "source": source,
-            "content": content,
-            "metadata": metadata.dict() if metadata else {}
-        }
-    except YaraError as e:
-        logger.error(f"Error getting YARA rule {rule_name}: {str(e)}")
-        return {
-            "name": rule_name,
-            "source": source,
-            "error": str(e)
-        }
-
-
-@mcp.tool()
-def validate_yara_rule(content: str) -> Dict[str, Any]:
-    """Validate a YARA rule.
-    
-    Args:
-        content: YARA rule content to validate
-        
-    Returns:
-        Validation result
-    """
-    try:
-        # Create a temporary rule name for validation
-        temp_rule_name = f"validate_{int(datetime.utcnow().timestamp())}.yar"
-        
-        # Attempt to add the rule (this will validate it)
-        yara_service.add_rule(temp_rule_name, content)
-        
-        # Rule is valid, delete it
-        yara_service.delete_rule(temp_rule_name)
-        
-        return {
-            "valid": True,
-            "message": "Rule is valid"
-        }
-    except YaraError as e:
-        logger.error(f"YARA rule validation error: {str(e)}")
-        return {
-            "valid": False,
-            "message": str(e)
-        }
-
-
-@mcp.tool()
-def add_yara_rule(
-    name: str, 
-    content: str, 
-    source: str = "custom"
+def get_hex_view(
+    file_id: str,
+    offset: int = 0,
+    length: Optional[int] = None,
+    bytes_per_line: int = 16
 ) -> Dict[str, Any]:
-    """Add a new YARA rule.
+    """Get hexadecimal view of file content.
+    
+    This tool provides a hexadecimal representation of file content with optional ASCII view.
+    It's useful for examining binary files or seeing the raw content of text files.
     
     Args:
-        name: Name of the rule
-        content: YARA rule content
-        source: Source of the rule ("custom" or "community")
+        file_id: ID of the file
+        offset: Starting offset in bytes
+        length: Number of bytes to return (if None, a reasonable default is used)
+        bytes_per_line: Number of bytes per line in output
         
     Returns:
-        Result of the operation
+        Hexadecimal representation of file content
     """
     try:
-        # Add the rule
-        metadata = yara_service.add_rule(name, content, source)
-        
-        return {
-            "success": True,
-            "message": f"Rule {name} added successfully",
-            "metadata": metadata.dict()
-        }
-    except YaraError as e:
-        logger.error(f"Error adding YARA rule {name}: {str(e)}")
-        return {
-            "success": False,
-            "message": str(e)
-        }
-
-
-@mcp.tool()
-def update_yara_rule(
-    name: str, 
-    content: str, 
-    source: str = "custom"
-) -> Dict[str, Any]:
-    """Update an existing YARA rule.
-    
-    Args:
-        name: Name of the rule
-        content: Updated YARA rule content
-        source: Source of the rule ("custom" or "community")
-        
-    Returns:
-        Result of the operation
-    """
-    try:
-        # Update the rule
-        metadata = yara_service.update_rule(name, content, source)
-        
-        return {
-            "success": True,
-            "message": f"Rule {name} updated successfully",
-            "metadata": metadata.dict()
-        }
-    except YaraError as e:
-        logger.error(f"Error updating YARA rule {name}: {str(e)}")
-        return {
-            "success": False,
-            "message": str(e)
-        }
-
-
-@mcp.tool()
-def delete_yara_rule(
-    name: str, 
-    source: str = "custom"
-) -> Dict[str, Any]:
-    """Delete a YARA rule.
-    
-    Args:
-        name: Name of the rule
-        source: Source of the rule ("custom" or "community")
-        
-    Returns:
-        Result of the operation
-    """
-    try:
-        # Delete the rule
-        result = yara_service.delete_rule(name, source)
-        
-        if result:
-            return {
-                "success": True,
-                "message": f"Rule {name} deleted successfully"
-            }
-        else:
-            return {
-                "success": False,
-                "message": f"Rule {name} not found"
-            }
-    except YaraError as e:
-        logger.error(f"Error deleting YARA rule {name}: {str(e)}")
-        return {
-            "success": False,
-            "message": str(e)
-        }
-
-
-@mcp.tool()
-def scan_url(
-    url: str,
-    rule_names: Optional[List[str]] = None,
-    sources: Optional[List[str]] = None,
-    timeout: Optional[int] = None
-) -> Dict[str, Any]:
-    """Scan a file from a URL with YARA rules.
-    
-    This function downloads and scans a file from the provided URL using YARA rules.
-    It's particularly useful for scanning potentially malicious files without storing
-    them locally on the user's machine.
-    
-    Args:
-        url: URL of the file to scan
-        rule_names: Optional list of rule names to match (if None, match all)
-        sources: Optional list of sources to match rules from (if None, match all)
-        timeout: Optional timeout in seconds (if None, use default)
-        
-    Returns:
-        Scan result containing file details, scan status, and any matches found
-    """
-    try:
-        # Fetch and scan the file
-        result = yara_service.fetch_and_scan(url, rule_names, sources, timeout)
-        
-        return {
-            "success": True,
-            "scan_id": str(result.scan_id),
-            "file_name": result.file_name,
-            "file_size": result.file_size,
-            "file_hash": result.file_hash,
-            "scan_time": result.scan_time,
-            "timeout_reached": result.timeout_reached,
-            "matches": [match.dict() for match in result.matches],
-            "match_count": len(result.matches)
-        }
-    except YaraError as e:
-        logger.error(f"Error scanning URL {url}: {str(e)}")
-        return {
-            "success": False,
-            "message": str(e)
-        }
-    except Exception as e:
-        logger.error(f"Unexpected error scanning URL {url}: {str(e)}")
-        return {
-            "success": False,
-            "message": f"Unexpected error: {str(e)}"
-        }
-
-
-@mcp.tool()
-def scan_data(
-    data: str,
-    filename: str,
-    encoding: str = "base64",
-    rule_names: Optional[List[str]] = None,
-    sources: Optional[List[str]] = None,
-    timeout: Optional[int] = None
-) -> Dict[str, Any]:
-    """Scan in-memory data with YARA rules.
-    
-    Args:
-        data: Data to scan (base64-encoded by default)
-        filename: Name of the file for reference
-        encoding: Encoding of the data ("base64" or "text")
-        rule_names: Optional list of rule names to match (if None, match all)
-        sources: Optional list of sources to match rules from (if None, match all)
-        timeout: Optional timeout in seconds (if None, use default)
-        
-    Returns:
-        Scan result
-    """
-    try:
-        # Decode the data
-        if encoding == "base64":
-            decoded_data = base64.b64decode(data)
-        elif encoding == "text":
-            decoded_data = data.encode('utf-8')
-        else:
-            raise ValueError(f"Unsupported encoding: {encoding}")
-        
-        # Scan the data
-        result = yara_service.match_data(decoded_data, filename, rule_names, sources, timeout)
-        
-        return {
-            "success": True,
-            "scan_id": str(result.scan_id),
-            "file_name": result.file_name,
-            "file_size": result.file_size,
-            "file_hash": result.file_hash,
-            "scan_time": result.scan_time,
-            "timeout_reached": result.timeout_reached,
-            "matches": [match.dict() for match in result.matches],
-            "match_count": len(result.matches)
-        }
-    except YaraError as e:
-        logger.error(f"Error scanning data: {str(e)}")
-        return {
-            "success": False,
-            "message": str(e)
-        }
-    except Exception as e:
-        logger.error(f"Unexpected error scanning data: {str(e)}")
-        return {
-            "success": False,
-            "message": f"Unexpected error: {str(e)}"
-        }
-
-
-@mcp.tool()
-def get_scan_result(scan_id: str) -> Dict[str, Any]:
-    """Get a scan result by ID.
-    
-    Args:
-        scan_id: ID of the scan result
-        
-    Returns:
-        Scan result
-    """
-    try:
-        # Get the result from storage
         storage = get_storage_client()
-        result_data = storage.get_result(scan_id)
+        result = storage.get_hex_view(file_id, offset, length, bytes_per_line)
         
         return {
             "success": True,
-            "result": result_data
+            "file_id": result.get("file_id"),
+            "file_name": result.get("file_name"),
+            "hex_content": result.get("hex_content"),
+            "offset": result.get("offset", offset),
+            "length": result.get("length", 0),
+            "total_size": result.get("total_size", 0),
+            "bytes_per_line": result.get("bytes_per_line", bytes_per_line)
         }
     except Exception as e:
-        logger.error(f"Error getting scan result {scan_id}: {str(e)}")
+        logger.error(f"Error getting hex view for file {file_id}: {str(e)}")
         return {
             "success": False,
-            "message": str(e)
+            "message": f"Error getting hex view: {str(e)}"
         }
 
 

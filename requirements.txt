@@ -7,7 +7,7 @@ yara-python>=4.5.0
 httpx>=0.27.0
 python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
-bcrypt==4.0.1  # Pin specific version to avoid attribute errors
+bcrypt==4.3.0
 python-multipart>=0.0.7
 python-dotenv>=1.0.0
 mcp>=1.3.0

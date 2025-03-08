@@ -82,88 +82,26 @@ def create_app() -> FastAPI:
     # Add API routers
     # Import routers here to avoid circular imports
     try:
-        from yaraflux_mcp_server.routers import auth_router, rules_router, scan_router
+        from yaraflux_mcp_server.routers import auth_router, rules_router, scan_router, files_router
         app.include_router(auth_router, prefix=settings.API_PREFIX)
         app.include_router(rules_router, prefix=settings.API_PREFIX)
         app.include_router(scan_router, prefix=settings.API_PREFIX)
+        app.include_router(files_router, prefix=settings.API_PREFIX)
         logger.info("API routers initialized")
     except Exception as e:
         logger.error(f"Error initializing API routers: {str(e)}")
     
     # Add MCP router
     try:
-        # Import MCP tools module
-        import yaraflux_mcp_server.mcp_tools  # noqa
+        # Import both MCP tools modules
+        import yaraflux_mcp_server.mcp_tools  # Original MCP tools
+        import yaraflux_mcp_server.claude_mcp_tools  # New modular Claude MCP tools
         
-        # For MCP 1.3.0 we need to create MCP endpoints manually
-        logger.info("Setting up MCP endpoints for MCP 1.3.0")
+        # Initialize Claude MCP tools with FastAPI
+        from yaraflux_mcp_server.claude_mcp import init_fastapi
+        init_fastapi(app)
         
-        from fastapi import Body
-        import inspect
-        import json
-        
-        # Get all registered tools from mcp_tools module
-        tools = []
-        tool_functions = {}
-        
-        # Identify functions decorated with @tool
-        for name, func in inspect.getmembers(yaraflux_mcp_server.mcp_tools):
-            if hasattr(func, "__mcp_tool__") or hasattr(func, "_tool") or hasattr(func, "tool"):
-                logger.info(f"Found MCP tool: {name}")
-                # Extract metadata if available
-                description = func.__doc__.strip().split("\n")[0] if func.__doc__ else name
-                tool_info = {
-                    "name": name,
-                    "description": description
-                }
-                # Create schema from function signature
-                sig = inspect.signature(func)
-                props = {}
-                required = []
-                for param_name, param in sig.parameters.items():
-                    if param.default is inspect.Parameter.empty:
-                        required.append(param_name)
-                    props[param_name] = {"type": "string"}
-                
-                tool_info["inputSchema"] = {
-                    "type": "object",
-                    "properties": props,
-                    "required": required
-                }
-                
-                tools.append(tool_info)
-                tool_functions[name] = func
-        
-        if tools:
-            # Register endpoints for MCP
-            @app.get("/mcp/v1/tools")
-            async def mcp_get_tools():
-                return tools
-            
-            @app.post("/mcp/v1/execute")
-            async def mcp_execute(data: dict = Body(...)):
-                name = data.get("name")
-                params = data.get("parameters", {})
-                
-                if name not in tool_functions:
-                    return JSONResponse(
-                        status_code=404,
-                        content={"error": f"Tool '{name}' not found"}
-                    )
-                
-                try:
-                    result = tool_functions[name](**params)
-                    return {"result": result}
-                except Exception as e:
-                    logger.error(f"Error executing tool {name}: {str(e)}")
-                    return JSONResponse(
-                        status_code=500,
-                        content={"error": str(e)}
-                    )
-            
-            logger.info(f"Registered {len(tools)} MCP tools: {', '.join(t['name'] for t in tools)}")
-        else:
-            logger.warning("No MCP tools found. MCP integration will not work.")
+        logger.info("MCP tools initialized and registered with FastAPI")
     except Exception as e:
         logger.error(f"Error setting up MCP: {str(e)}")
         logger.warning("MCP integration skipped.")

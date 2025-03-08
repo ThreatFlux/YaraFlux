@@ -17,7 +17,18 @@
         "PYTHONPATH=/app",
         "yaraflux-mcp-server:latest"
       ],
-      "timeout": 600
+      "timeout": 600,
+      "autoApprove": [
+        "scan_url",
+        "scan_data",
+        "get_yara_rule",
+        "add_yara_rule",
+        "validate_yara_rule",
+        "get_hex_view",
+        "extract_strings"
+      ],
+      "disabled": false,
+      "pipeMode": "binary"
     }
   }
 }
