@@ -4,12 +4,12 @@ This module defines data models for requests, responses, and internal representa
 used by the YaraFlux MCP Server.
 """
 
-from datetime import datetime
+from datetime import datetime, UTC
 from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, ByteSize, Field, HttpUrl, validator
+from pydantic import BaseModel, ByteSize, Field, HttpUrl, field_validator
 
 
 class UserRole(str, Enum):
@@ -69,7 +69,7 @@ class YaraScanResult(BaseModel):
     file_name: str
     file_size: int
     file_hash: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     matches: List[YaraMatch] = Field(default_factory=list)
     scan_time: float  # Scan duration in seconds
     timeout_reached: bool = False
@@ -84,7 +84,7 @@ class YaraRuleMetadata(BaseModel):
     author: Optional[str] = None
     description: Optional[str] = None
     reference: Optional[str] = None
-    created: datetime = Field(default_factory=datetime.utcnow)
+    created: datetime = Field(default_factory=lambda: datetime.now(UTC))
     modified: Optional[datetime] = None
     tags: List[str] = Field(default_factory=list)
     is_compiled: bool = False
@@ -113,7 +113,7 @@ class YaraRuleCreate(BaseModel):
     tags: List[str] = Field(default_factory=list)
     content_type: Optional[str] = "yara"  # Can be 'yara' or 'json'
 
-    @validator("name")
+    @field_validator("name")
     def name_must_be_valid(cls, v: str) -> str:
         """Validate rule name."""
         if not v or not v.strip():
@@ -130,7 +130,7 @@ class ScanRequest(BaseModel):
     rule_names: Optional[List[str]] = None  # If None, use all available rules
     timeout: Optional[int] = None  # Scan timeout in seconds
 
-    @validator("rule_names")
+    @field_validator("rule_names")
     def validate_rule_names(cls, v: Optional[List[str]]) -> Optional[List[str]]:
         """Validate rule names."""
         if v is not None and len(v) == 0:
@@ -162,7 +162,7 @@ class FileInfo(BaseModel):
     file_size: int
     file_hash: str
     mime_type: str = "application/octet-stream"
-    uploaded_at: datetime = Field(default_factory=datetime.utcnow)
+    uploaded_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     uploader: Optional[str] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
 

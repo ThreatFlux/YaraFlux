@@ -2,7 +2,7 @@
 
 import os
 import tempfile
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Dict
 from unittest.mock import MagicMock, Mock, patch
@@ -55,7 +55,7 @@ class MockStorageClient(StorageClient):
                 {
                     "name": name,
                     "source": rule_source,
-                    "created": datetime.utcnow(),
+                    "created": datetime.now(UTC),
                     "modified": None,
                 }
             )

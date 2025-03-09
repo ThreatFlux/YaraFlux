@@ -11,7 +11,7 @@ import mimetypes
 import os
 import re
 import shutil
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, BinaryIO, Dict, List, Optional, Tuple, Union
 from uuid import uuid4
 
@@ -290,7 +290,7 @@ class LocalStorageClient(StorageClient):
             "file_size": file_size,
             "file_hash": file_hash,
             "mime_type": mime_type,
-            "uploaded_at": datetime.utcnow().isoformat(),
+            "uploaded_at": datetime.now(UTC).isoformat(),
             "metadata": metadata or {},
         }
 

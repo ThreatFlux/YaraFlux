@@ -37,10 +37,10 @@ def client_with_user(test_user):
     app.dependency_overrides = {}
 
 
-@pytest.mark.skip("YaraScanResult model needs updating for tests")
 @pytest.fixture
 def sample_scan_result():
     """Sample scan result fixture."""
+    pytest.skip("YaraScanResult model needs updating for tests")
     return YaraScanResult(
         scan_id=str(uuid4()),
         timestamp=datetime.now(UTC).isoformat(),
@@ -290,7 +290,7 @@ class TestGetScanResult:
         # Setup mock
         mock_storage = Mock()
         mock_get_storage.return_value = mock_storage
-        mock_storage.get_result.return_value = sample_scan_result.dict()
+        mock_storage.get_result.return_value = sample_scan_result.model_dump()
 
         # Make request
         scan_id = sample_scan_result.scan_id

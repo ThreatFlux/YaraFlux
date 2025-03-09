@@ -23,9 +23,9 @@ def test_list_yara_rules_success(mock_yara_service):
     """Test list_yara_rules successfully returns rules."""
     # Setup mocks
     rule1 = Mock()
-    rule1.dict.return_value = {"name": "rule1.yar", "source": "custom"}
+    rule1.model_dump.return_value = {"name": "rule1.yar", "source": "custom"}
     rule2 = Mock()
-    rule2.dict.return_value = {"name": "rule2.yar", "source": "community"}
+    rule2.model_dump.return_value = {"name": "rule2.yar", "source": "community"}
     mock_yara_service.list_rules.return_value = [rule1, rule2]
 
     # Call the function (without filters)
@@ -45,9 +45,9 @@ def test_list_yara_rules_filtered(mock_yara_service):
     """Test list_yara_rules with source filtering."""
     # Setup mocks
     rule1 = Mock()
-    rule1.dict.return_value = {"name": "rule1.yar", "source": "custom"}
+    rule1.model_dump.return_value = {"name": "rule1.yar", "source": "custom"}
     rule2 = Mock()
-    rule2.dict.return_value = {"name": "rule2.yar", "source": "custom"}
+    rule2.model_dump.return_value = {"name": "rule2.yar", "source": "custom"}
     mock_yara_service.list_rules.return_value = [rule1, rule2]
 
     # Call the function with source filter
@@ -65,9 +65,9 @@ def test_list_yara_rules_all_source(mock_yara_service):
     """Test list_yara_rules with 'all' source."""
     # Setup mocks
     rule1 = Mock()
-    rule1.dict.return_value = {"name": "rule1.yar", "source": "custom"}
+    rule1.model_dump.return_value = {"name": "rule1.yar", "source": "custom"}
     rule2 = Mock()
-    rule2.dict.return_value = {"name": "rule2.yar", "source": "community"}
+    rule2.model_dump.return_value = {"name": "rule2.yar", "source": "community"}
     mock_yara_service.list_rules.return_value = [rule1, rule2]
 
     # Call the function with 'all' source
@@ -100,7 +100,7 @@ def test_get_yara_rule_success(mock_yara_service):
     mock_yara_service.get_rule.return_value = "rule test { condition: true }"
     rule = Mock()
     rule.name = "test.yar"
-    rule.dict.return_value = {"name": "test.yar", "source": "custom"}
+    rule.model_dump.return_value = {"name": "test.yar", "source": "custom"}
     mock_yara_service.list_rules.return_value = [rule]
 
     # Call the function
@@ -139,7 +139,7 @@ def test_get_yara_rule_no_metadata(mock_yara_service):
     mock_yara_service.get_rule.return_value = "rule test { condition: true }"
     rule = Mock()
     rule.name = "other_rule.yar"
-    rule.dict.return_value = {"name": "other_rule.yar", "source": "custom"}
+    rule.model_dump.return_value = {"name": "other_rule.yar", "source": "custom"}
     mock_yara_service.list_rules.return_value = [rule]  # Different rule name
 
     # Call the function
@@ -209,7 +209,7 @@ def test_add_yara_rule_success(mock_yara_service):
     """Test add_yara_rule successfully adds a rule."""
     # Setup mock
     metadata = Mock()
-    metadata.dict.return_value = {"name": "test.yar", "source": "custom"}
+    metadata.model_dump.return_value = {"name": "test.yar", "source": "custom"}
     mock_yara_service.add_rule.return_value = metadata
 
     # Call the function
@@ -229,7 +229,7 @@ def test_add_yara_rule_adds_extension(mock_yara_service):
     """Test add_yara_rule adds .yar extension if missing."""
     # Setup mock
     metadata = Mock()
-    metadata.dict.return_value = {"name": "test.yar", "source": "custom"}
+    metadata.model_dump.return_value = {"name": "test.yar", "source": "custom"}
     mock_yara_service.add_rule.return_value = metadata
 
     # Call the function without .yar extension
@@ -289,7 +289,7 @@ def test_update_yara_rule_success(mock_yara_service):
     """Test update_yara_rule successfully updates a rule."""
     # Setup mocks
     metadata = Mock()
-    metadata.dict.return_value = {"name": "test.yar", "source": "custom"}
+    metadata.model_dump.return_value = {"name": "test.yar", "source": "custom"}
     mock_yara_service.update_rule.return_value = metadata
 
     # Call the function

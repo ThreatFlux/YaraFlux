@@ -52,7 +52,7 @@ def scan_url(
             "file_hash": result.file_hash,
             "scan_time": result.scan_time,
             "timeout_reached": result.timeout_reached,
-            "matches": [match.dict() for match in result.matches],
+            "matches": [match.model_dump() for match in result.matches],
             "match_count": len(result.matches),
         }
     except YaraError as e:
@@ -133,7 +133,7 @@ def scan_data(
             "file_hash": result.file_hash,
             "scan_time": result.scan_time,
             "timeout_reached": result.timeout_reached,
-            "matches": [match.dict() for match in result.matches],
+            "matches": [match.model_dump() for match in result.matches],
             "match_count": len(result.matches),
         }
     except YaraError as e:

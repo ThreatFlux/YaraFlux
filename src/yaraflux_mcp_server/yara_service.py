@@ -12,7 +12,7 @@ import logging
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, BinaryIO, Callable, Dict, List, Optional, Union
 from urllib.parse import urlparse
 
@@ -325,7 +325,7 @@ class YaraService:
             compiled_rule = self._compile_rule(rule_name, source)
 
             # Return metadata
-            return YaraRuleMetadata(name=rule_name, source=source, created=datetime.utcnow(), is_compiled=True)
+            return YaraRuleMetadata(name=rule_name, source=source, created=datetime.now(UTC), is_compiled=True)
         except StorageError as e:
             logger.error(f"Storage error saving rule {rule_name}: {str(e)}")
             raise YaraError(f"Failed to save rule: {str(e)}")
@@ -355,7 +355,7 @@ class YaraService:
         metadata = self.add_rule(rule_name, content, source)
 
         # Set modified timestamp
-        metadata.modified = datetime.utcnow()
+        metadata.modified = datetime.now(UTC)
 
         # Clear cache for this rule
         cache_key = f"{source}:{rule_name}"
@@ -454,7 +454,7 @@ class YaraService:
                     if isinstance(created, str):
                         created = datetime.fromisoformat(created)
                     elif not isinstance(created, datetime):
-                        created = datetime.utcnow()
+                        created = datetime.now(UTC)
 
                     modified = rule.get("modified")
                     if isinstance(modified, str):
@@ -559,7 +559,7 @@ class YaraService:
 
             # Save the result
             result_id = result.scan_id
-            self.storage.save_result(str(result_id), result.dict())
+            self.storage.save_result(str(result_id), result.model_dump())
 
             return result
         except (IOError, OSError) as e:
@@ -655,7 +655,7 @@ class YaraService:
 
             # Save the result
             result_id = result.scan_id
-            self.storage.save_result(str(result_id), result.dict())
+            self.storage.save_result(str(result_id), result.model_dump())
 
             return result
         except Exception as e:

@@ -44,7 +44,7 @@ def list_yara_rules(source: Optional[str] = None) -> List[Dict[str, Any]]:
         rules = yara_service.list_rules(None if source == "all" else source)
 
         # Convert to dict for serialization
-        return [rule.dict() for rule in rules]
+        return [rule.model_dump() for rule in rules]
     except ValueError as e:
         logger.error(f"Value error in list_yara_rules: {str(e)}")
         return []
@@ -92,7 +92,7 @@ def get_yara_rule(rule_name: str, source: str = "custom") -> Dict[str, Any]:
                 "name": rule_name,
                 "source": source,
                 "content": content,
-                "metadata": metadata.dict() if metadata else {},
+                "metadata": metadata.model_dump() if metadata else {},
             },
         }
     except YaraError as e:
@@ -189,7 +189,7 @@ def add_yara_rule(name: str, content: str, source: str = "custom") -> Dict[str, 
         # Add the rule
         metadata = yara_service.add_rule(name, content, source)
 
-        return {"success": True, "message": f"Rule {name} added successfully", "metadata": metadata.dict()}
+        return {"success": True, "message": f"Rule {name} added successfully", "metadata": metadata.model_dump()}
     except YaraError as e:
         logger.error(f"YARA error in add_yara_rule: {str(e)}")
         return {"success": False, "message": str(e)}
@@ -233,7 +233,7 @@ def update_yara_rule(name: str, content: str, source: str = "custom") -> Dict[st
         # Update the rule
         metadata = yara_service.update_rule(name, content, source)
 
-        return {"success": True, "message": f"Rule {name} updated successfully", "metadata": metadata.dict()}
+        return {"success": True, "message": f"Rule {name} updated successfully", "metadata": metadata.model_dump()}
     except YaraError as e:
         logger.error(f"YARA error in update_yara_rule: {str(e)}")
         return {"success": False, "message": str(e)}

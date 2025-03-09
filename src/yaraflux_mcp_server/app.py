@@ -6,6 +6,7 @@ middleware, and event handlers.
 
 import logging
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,6 +19,41 @@ from yaraflux_mcp_server.yara_service import yara_service
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Lifespan context manager for FastAPI application.
+    
+    This replaces the deprecated @app.on_event handlers and manages the application lifecycle.
+    """
+    # ===== Startup operations =====
+    logger.info("Starting YaraFlux MCP Server")
+    
+    # Ensure directories exist
+    ensure_directories_exist()
+    logger.info("Directory structure verified")
+    
+    # Initialize user database
+    try:
+        init_user_db()
+        logger.info("User database initialized")
+    except Exception as e:
+        logger.error(f"Error initializing user database: {str(e)}")
+    
+    # Load YARA rules
+    try:
+        yara_service.load_rules(include_default_rules=settings.YARA_INCLUDE_DEFAULT_RULES)
+        logger.info("YARA rules loaded")
+    except Exception as e:
+        logger.error(f"Error loading YARA rules: {str(e)}")
+    
+    # Yield control back to the application
+    yield
+    
+    # ===== Shutdown operations =====
+    logger.info("Shutting down YaraFlux MCP Server")
 
 
 def ensure_directories_exist() -> None:
@@ -42,11 +78,12 @@ def create_app() -> FastAPI:
     Returns:
         Configured FastAPI application
     """
-    # Create FastAPI app
+    # Create FastAPI app with lifespan
     app = FastAPI(
         title="YaraFlux MCP Server",
         description="Model Context Protocol server for YARA scanning",
         version="0.1.0",
+        lifespan=lifespan,
     )
 
     # Add CORS middleware
@@ -101,36 +138,6 @@ def create_app() -> FastAPI:
     async def health_check():
         """Health check endpoint."""
         return {"status": "healthy"}
-
-    # Add startup event
-    @app.on_event("startup")
-    async def startup_event():
-        """Initialize application on startup."""
-        logger.info("Starting YaraFlux MCP Server")
-
-        # Ensure directories exist
-        ensure_directories_exist()
-        logger.info("Directory structure verified")
-
-        # Initialize user database
-        try:
-            init_user_db()
-            logger.info("User database initialized")
-        except Exception as e:
-            logger.error(f"Error initializing user database: {str(e)}")
-
-        # Load YARA rules
-        try:
-            yara_service.load_rules(include_default_rules=settings.YARA_INCLUDE_DEFAULT_RULES)
-            logger.info("YARA rules loaded")
-        except Exception as e:
-            logger.error(f"Error loading YARA rules: {str(e)}")
-
-    # Add shutdown event
-    @app.on_event("shutdown")
-    async def shutdown_event():
-        """Cleanup on application shutdown."""
-        logger.info("Shutting down YaraFlux MCP Server")
 
     return app
 

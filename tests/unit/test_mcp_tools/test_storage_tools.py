@@ -104,20 +104,14 @@ def test_get_storage_info_error(mock_get_storage):
     assert result["info"]["usage"]["rules"]["file_count"] == 0
 
 
-@patch("yaraflux_mcp_server.mcp_tools.storage_tools.datetime")
 @patch("yaraflux_mcp_server.mcp_tools.storage_tools.get_storage_client")
-def test_clean_storage(mock_get_storage, mock_datetime):
+def test_clean_storage(mock_get_storage):
     """Test clean_storage tool."""
-    # Create a fixed reference datetime for testing (non-timezone-aware)
-    fixed_now = datetime(2025, 3, 1, 12, 0, 0)
-    mock_datetime.utcnow.return_value = fixed_now
-    mock_datetime.fromisoformat.side_effect = datetime.fromisoformat
-
     # We'll simplify this test to focus on the samples cleaning part, which is easier to mock
     mock_storage = Mock()
 
     # Define two old sample files with dates that are older than our cutoff
-    two_months_ago = (fixed_now - timedelta(days=60)).isoformat()
+    two_months_ago = (datetime.now(timezone.utc) - timedelta(days=60)).isoformat()
     samples = [
         {
             "file_id": "sample1",
@@ -162,9 +156,13 @@ def test_clean_storage(mock_get_storage, mock_datetime):
     assert result["cleaned_count"] > 0
 
 
+@patch("yaraflux_mcp_server.mcp_tools.storage_tools.datetime")
 @patch("yaraflux_mcp_server.mcp_tools.storage_tools.get_storage_client")
-def test_clean_storage_specific_type(mock_get_storage):
+def test_clean_storage_specific_type(mock_get_storage, mock_datetime):
     """Test clean_storage with specific storage type."""
+    # Mock the datetime.now function
+    fixed_now = datetime(2025, 3, 1, 12, 0, 0, tzinfo=timezone.utc)
+    mock_datetime.now.return_value = fixed_now
     # This test will verify that only the specified storage type is cleaned
     mock_storage = Mock()
 

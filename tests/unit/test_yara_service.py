@@ -3,7 +3,7 @@
 import hashlib
 import os
 import tempfile
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -183,12 +183,12 @@ def test_list_rules():
         {
             "name": "rule1.yar",
             "source": "custom",
-            "created": datetime.utcnow(),
+            "created": datetime.now(UTC),
         },
         {
             "name": "rule2.yar",
             "source": "community",
-            "created": datetime.utcnow(),
+            "created": datetime.now(UTC),
         },
     ]
 

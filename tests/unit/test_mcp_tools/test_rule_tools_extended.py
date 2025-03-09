@@ -2,7 +2,7 @@
 
 import json
 from datetime import UTC, datetime
-from unittest.mock import MagicMock, Mock, call, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, call, patch
 
 import pytest
 
@@ -473,15 +473,16 @@ def test_import_threatflux_rules_custom_url_branch(mock_httpx, mock_yara_service
     mock_response.json.return_value = {"rules": ["rule1.yar"]}
     mock_response.text = "rule test { condition: true }"
     mock_httpx.get.return_value = mock_response
-
+    
+    # We don't need to mock the async function since import_threatflux_rules doesn't use it
     # Call the function with custom URL and branch
     result = import_threatflux_rules(url="https://github.com/custom/repo", branch="dev")
-
+    
     # Verify the result
     assert isinstance(result, dict)
     assert "success" in result
     assert result["success"] is True
-
+    
     # Verify httpx.get called with correct URL including branch
     expected_url = "https://raw.githubusercontent.com/custom/repo/dev/index.json"
     mock_httpx.get.assert_any_call(expected_url, follow_redirects=True)

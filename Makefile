@@ -144,8 +144,10 @@ coverage:
 	@echo "Checking test dependencies..."
 	$(UV) pip install PyJWT >/dev/null 2>&1 || true
 	@echo "Generating coverage report..."
-	$(UV) run coverage run -m pytest tests/
-	$(UV) run coverage report -m
+	rm -f .coverage htmlcov/* || true
+	# Use the .coveragerc file directly instead of command-line args
+	$(UV) run python -m pytest tests/
+	$(UV) run coverage report
 	$(UV) run coverage html
 	@echo "Coverage report generated in htmlcov/"
 

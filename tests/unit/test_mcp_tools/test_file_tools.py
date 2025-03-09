@@ -48,17 +48,21 @@ def test_upload_file_success_text(mock_get_storage):
     """Test upload_file successfully uploads a text file."""
     # Setup mock
     mock_storage = Mock()
+    # Make sure the save_file method returns a value, not a coroutine
     file_info = {"id": "test-file-id", "filename": "test.txt", "size": 12}
     mock_storage.save_file.return_value = file_info
     mock_get_storage.return_value = mock_storage
-
-    # Call the function
-    result = upload_file(file_name="test.txt", data="test content", encoding="text")
-
+    
+    # If the function is async, patch asyncio.run to handle coroutines
+    # This is a workaround for handling async functions in non-async tests
+    with patch("asyncio.run", side_effect=lambda x: x):
+        # Call the function
+        result = upload_file(file_name="test.txt", data="test content", encoding="text")
+        
     # Verify results
     assert result["success"] is True
     assert result["file_info"] == file_info
-
+    
     # Verify mock was called with correct parameters
     # The content should be encoded to bytes from text
     mock_storage.save_file.assert_called_once_with("test.txt", b"test content", {})

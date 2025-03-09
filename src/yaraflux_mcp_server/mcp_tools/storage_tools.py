@@ -6,7 +6,7 @@ error handling.
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Any, Dict, Optional
 
 from yaraflux_mcp_server.mcp_tools.base import register_tool
@@ -153,10 +153,10 @@ def clean_storage(storage_type: str, older_than_days: Optional[int] = None) -> D
 
         # Calculate cutoff date
         if older_than_days is not None:
-            cutoff_date = datetime.utcnow() - timedelta(days=older_than_days)
+            cutoff_date = datetime.now(UTC) - timedelta(days=older_than_days)
         else:
             # Default to 30 days
-            cutoff_date = datetime.utcnow() - timedelta(days=30)
+            cutoff_date = datetime.now(UTC) - timedelta(days=30)
 
         # Clean results
         if storage_type in ["results", "all"]:

@@ -5,7 +5,7 @@ adding, updating, and deleting rules.
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import List, Optional
 
 from fastapi import (
@@ -51,7 +51,7 @@ except Exception as e:
     def validate_rule_tool(content: str):
         try:
             # Create a temporary rule name for validation
-            temp_rule_name = f"validate_{int(datetime.utcnow().timestamp())}.yar"
+            temp_rule_name = f"validate_{int(datetime.now(UTC).timestamp())}.yar"
             # Validate via direct service call
             yara_service.add_rule(temp_rule_name, content)
             yara_service.delete_rule(temp_rule_name)
@@ -117,7 +117,7 @@ async def get_rule(
             "name": rule_name,
             "source": source,
             "content": content,
-            "metadata": metadata.dict() if metadata else {},
+            "metadata": metadata.model_dump() if metadata else {},
         }
     except YaraError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

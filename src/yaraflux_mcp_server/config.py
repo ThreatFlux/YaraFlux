@@ -8,7 +8,8 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from pydantic import Field, validator
+from datetime import UTC
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -54,33 +55,33 @@ class Settings(BaseSettings):
     HOST: str = Field(default="0.0.0.0", description="Host to bind server")
     PORT: int = Field(default=8000, description="Port to bind server")
 
-    @validator("STORAGE_DIR", "YARA_RULES_DIR", "YARA_SAMPLES_DIR", "YARA_RESULTS_DIR", pre=True)
+    @field_validator("STORAGE_DIR", "YARA_RULES_DIR", "YARA_SAMPLES_DIR", "YARA_RESULTS_DIR", mode="before")
     def ensure_path_exists(cls, v: Any) -> Path:
         """Ensure paths exist and are valid."""
         path = Path(v)
         os.makedirs(path, exist_ok=True)
         return path
 
-    @validator("USE_MINIO", "MINIO_ENDPOINT", "MINIO_ACCESS_KEY", "MINIO_SECRET_KEY")
-    def validate_minio_settings(cls, v: Any, values: Dict[str, Any], **kwargs: Any) -> Any:
+    @field_validator("USE_MINIO", "MINIO_ENDPOINT", "MINIO_ACCESS_KEY", "MINIO_SECRET_KEY")
+    def validate_minio_settings(cls, v: Any, info: Dict[str, Any]) -> Any:
         """Validate MinIO settings if USE_MINIO is True."""
-        field = kwargs.get("field")
-
-        # Skip validation if field is None
-        if field is None:
+        field_name = info.field_name
+        data = info.data
+        
+        # Skip validation if we can't determine the field name
+        if field_name is None:
             return v
 
-        if field.name != "USE_MINIO" and values.get("USE_MINIO", False):
+        if field_name != "USE_MINIO" and data.get("USE_MINIO", False):
             if v is None:
-                raise ValueError(f"{field.name} must be set when USE_MINIO is True")
+                raise ValueError(f"{field_name} must be set when USE_MINIO is True")
         return v
 
-    class Config:
-        """Pydantic configuration."""
-
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "case_sensitive": True,
+    }
 
 
 # Create and export settings instance
