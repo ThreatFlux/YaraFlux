@@ -66,9 +66,7 @@ except Exception as e:
 
 
 @router.get("/", response_model=List[YaraRuleMetadata])
-async def list_rules(
-    source: Optional[str] = None, current_user: User = Depends(get_current_active_user)
-):
+async def list_rules(source: Optional[str] = None, current_user: User = Depends(get_current_active_user)):
     """List all YARA rules.
 
     Args:
@@ -283,9 +281,7 @@ async def update_rule_plain(
 
 
 @router.delete("/{rule_name}")
-async def delete_rule(
-    rule_name: str, source: str = "custom", current_user: User = Depends(get_current_active_user)
-):
+async def delete_rule(rule_name: str, source: str = "custom", current_user: User = Depends(get_current_active_user)):
     """Delete a YARA rule.
 
     Args:
@@ -315,9 +311,7 @@ async def delete_rule(
 
 
 @router.post("/import")
-async def import_rules(
-    url: Optional[str] = None, branch: str = "master", current_user: User = Depends(validate_admin)
-):
+async def import_rules(url: Optional[str] = None, branch: str = "master", current_user: User = Depends(validate_admin)):
     """Import ThreatFlux YARA rules from GitHub.
 
     Args:
@@ -340,9 +334,7 @@ async def import_rules(
                 detail=result.get("message", "Import failed"),
             )
 
-        logger.info(
-            f"Rules imported from {url or 'ThreatFlux repository'} by {current_user.username}"
-        )
+        logger.info(f"Rules imported from {url or 'ThreatFlux repository'} by {current_user.username}")
 
         return result
     except Exception as e:

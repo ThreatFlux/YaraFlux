@@ -13,9 +13,7 @@ import uvicorn
 from yaraflux_mcp_server.config import settings
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -28,9 +26,7 @@ def cli():
 @cli.command()
 @click.option("--host", default=settings.HOST, help="Host to bind the server to")
 @click.option("--port", default=settings.PORT, type=int, help="Port to bind the server to")
-@click.option(
-    "--debug", is_flag=True, default=settings.DEBUG, help="Enable debug mode with auto-reload"
-)
+@click.option("--debug", is_flag=True, default=settings.DEBUG, help="Enable debug mode with auto-reload")
 @click.option("--workers", default=1, type=int, help="Number of worker processes")
 def run(host: str, port: int, debug: bool, workers: int):
     """Run the YaraFlux MCP Server."""

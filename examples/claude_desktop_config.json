@@ -4,20 +4,20 @@
       "command": "docker",
       "args": [
         "run",
+        "-i",
         "--rm",
-        "--name",
-        "yaraflux-mcp-server",
         "--env",
         "JWT_SECRET_KEY=your-secret-key",
-        "--env", 
+        "--env",
         "ADMIN_PASSWORD=your-admin-password",
         "--env",
         "DEBUG=true",
         "--env",
-        "PYTHONPATH=/app",
+        "PYTHONUNBUFFERED=1",
         "yaraflux-mcp-server:latest"
       ],
-      "timeout": 600,
+      "timeout": 1200,
+      "disabled": false,
       "autoApprove": [
         "scan_url",
         "scan_data",
@@ -25,9 +25,9 @@
         "add_yara_rule",
         "validate_yara_rule",
         "get_hex_view",
-        "extract_strings"
+        "upload_file",
+        "list_yara_rules"
       ],
-      "disabled": false,
       "pipeMode": "binary"
     }
   }

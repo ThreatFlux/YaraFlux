@@ -6,10 +6,10 @@ used by the YaraFlux MCP Server.
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union, Set
+from typing import Any, Dict, List, Optional, Set, Union
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field, HttpUrl, validator, ByteSize
+from pydantic import BaseModel, ByteSize, Field, HttpUrl, validator
 
 
 class UserRole(str, Enum):
@@ -150,9 +150,10 @@ class ErrorResponse(BaseModel):
 
 # File Management Models
 
+
 class FileInfo(BaseModel):
     """File information model."""
-    
+
     file_id: UUID = Field(default_factory=uuid4)
     file_name: str
     file_size: int
@@ -165,20 +166,20 @@ class FileInfo(BaseModel):
 
 class FileUploadRequest(BaseModel):
     """Model for file upload requests."""
-    
+
     file_name: str
     metadata: Dict[str, Any] = Field(default_factory=dict)
-    
+
 
 class FileUploadResponse(BaseModel):
     """Model for file upload responses."""
-    
+
     file_info: FileInfo
 
 
 class FileListResponse(BaseModel):
     """Model for file list responses."""
-    
+
     files: List[FileInfo]
     total: int
     page: int = 1
@@ -187,7 +188,7 @@ class FileListResponse(BaseModel):
 
 class FileStringsRequest(BaseModel):
     """Model for file strings extraction requests."""
-    
+
     min_length: int = 4
     include_unicode: bool = True
     include_ascii: bool = True
@@ -196,7 +197,7 @@ class FileStringsRequest(BaseModel):
 
 class FileString(BaseModel):
     """Model for an extracted string."""
-    
+
     string: str
     offset: int
     string_type: str  # "ascii" or "unicode"
@@ -204,7 +205,7 @@ class FileString(BaseModel):
 
 class FileStringsResponse(BaseModel):
     """Model for file strings extraction responses."""
-    
+
     file_id: UUID
     file_name: str
     strings: List[FileString]
@@ -216,7 +217,7 @@ class FileStringsResponse(BaseModel):
 
 class FileHexRequest(BaseModel):
     """Model for file hex view requests."""
-    
+
     offset: int = 0
     length: Optional[int] = None
     bytes_per_line: int = 16
@@ -225,7 +226,7 @@ class FileHexRequest(BaseModel):
 
 class FileHexResponse(BaseModel):
     """Model for file hex view responses."""
-    
+
     file_id: UUID
     file_name: str
     hex_content: str
@@ -238,7 +239,7 @@ class FileHexResponse(BaseModel):
 
 class FileDeleteResponse(BaseModel):
     """Model for file deletion responses."""
-    
+
     file_id: UUID
     success: bool
     message: str

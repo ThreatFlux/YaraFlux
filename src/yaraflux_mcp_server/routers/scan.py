@@ -104,9 +104,7 @@ async def scan_file(
             temp_file.close()
 
             # Scan the file
-            result = yara_service.match_file(
-                file_path=temp_file.name, rule_names=rules_list, timeout=timeout
-            )
+            result = yara_service.match_file(file_path=temp_file.name, rule_names=rules_list, timeout=timeout)
 
             logger.info(f"Scanned file {file.filename} by {current_user.username}")
 
@@ -150,6 +148,4 @@ async def get_scan_result(scan_id: UUID, current_user: User = Depends(get_curren
 
         return {"result": result}
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=f"Scan result not found: {str(e)}"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Scan result not found: {str(e)}")

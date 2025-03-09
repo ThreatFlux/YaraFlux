@@ -3,6 +3,7 @@
 ![GitHub License](https://img.shields.io/github/license/ThreatFlux/YaraFlux)
 ![Python Version](https://img.shields.io/badge/python-3.13-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.104.1-009688)
+![MCP](https://img.shields.io/badge/MCP-Integrated-blueviolet)
 
 A Model Context Protocol (MCP) server for YARA scanning, providing LLMs with capabilities to analyze files with YARA rules.
 
@@ -22,6 +23,9 @@ YaraFlux MCP Server enables AI assistants to perform YARA rule-based threat anal
 - 🤖 Direct AI assistant integration via MCP
 - 🔍 URL and data scanning capabilities
 - 📊 Detailed scan results with match highlighting
+- 🧪 19 integrated MCP tools for comprehensive functionality
+- 📊 Hex view and string extraction for deep file analysis
+- 🔄 Modular architecture with optimized package structure
 
 ## 🚀 Quick Start
 
@@ -164,8 +168,22 @@ yaraflux_mcp_server/
 │       ├── config.py              # Configuration settings loader
 │       ├── models.py              # Pydantic models for requests/responses
 │       ├── mcp_server.py          # MCP server implementation
+│       ├── mcp_tools.py           # Legacy MCP tools module
+│       ├── mcp_tools/             # Modular MCP tools package
+│       │   ├── __init__.py        # Package initialization
+│       │   ├── base.py            # Base tool registration utilities
+│       │   ├── file_tools.py      # File management tools
+│       │   ├── rule_tools.py      # YARA rule management tools
+│       │   ├── scan_tools.py      # Scanning tools
+│       │   └── storage_tools.py   # Storage management tools
 │       ├── run_mcp.py             # MCP server entry point
-│       ├── storage.py             # Storage abstraction (local or MinIO)
+│       ├── storage.py             # Storage abstraction
+│       ├── storage/               # Storage implementation package
+│       │   ├── __init__.py        # Package initialization
+│       │   ├── base.py            # Base storage interface
+│       │   ├── factory.py         # Storage client factory
+│       │   ├── local.py           # Local filesystem storage
+│       │   └── minio.py           # MinIO/S3 storage
 │       ├── yara_service.py        # YARA rule management and scanning
 │       ├── __init__.py            # Package initialization
 │       ├── __main__.py            # CLI entry point
@@ -173,6 +191,7 @@ yaraflux_mcp_server/
 │           ├── auth.py            # Authentication API routes
 │           ├── rules.py           # YARA rule management API routes
 │           ├── scan.py            # YARA scanning API routes
+│           ├── files.py           # File management API routes
 │           └── __init__.py
 ├── tests/                         # Test suite
 ├── examples/                      # Example configurations
@@ -237,5 +256,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 patreon.com/vtriple
 
 paypal.me/ThreatFlux
-
-

@@ -7,7 +7,7 @@ based on the configuration settings.
 import logging
 from typing import TYPE_CHECKING
 
-from yaraflux_mcp_server.storage.base import StorageClient, StorageError
+from yaraflux_mcp_server.storage.base import StorageClient
 from yaraflux_mcp_server.storage.local import LocalStorageClient
 
 # Configure logging
@@ -22,13 +22,14 @@ else:
 
 def get_storage_client() -> StorageClient:
     """Get the appropriate storage client based on configuration.
-    
+
     Returns:
         A StorageClient implementation
     """
     if settings.USE_MINIO:
         try:
             from yaraflux_mcp_server.storage.minio import MinioStorageClient
+
             logger.info("Using MinIO storage client")
             return MinioStorageClient()
         except (ImportError, ValueError) as e:
