@@ -5,7 +5,6 @@ YARA rules, samples, scan results, and other files.
 """
 
 import hashlib
-import io
 import json
 import logging
 import mimetypes
@@ -13,7 +12,6 @@ import os
 import re
 import shutil
 from datetime import datetime
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, BinaryIO, Dict, List, Optional, Tuple, Union
 from uuid import uuid4
 

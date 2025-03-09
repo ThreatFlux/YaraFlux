@@ -316,7 +316,7 @@ DOWNLOAD_FILE_SCHEMA = {
 }
 
 # Storage tool schemas
-GET_STORAGE_INFO_SCHEMA = {}  # No parameters needed
+GET_STORAGE_INFO_SCHEMA: Dict[str, Dict[str, Any]] = {}  # No parameters needed
 
 CLEAN_STORAGE_SCHEMA = {
     "storage_type": {

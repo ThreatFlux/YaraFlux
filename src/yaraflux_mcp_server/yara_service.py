@@ -8,17 +8,12 @@ This module provides functionality for working with YARA rules, including:
 """
 
 import hashlib
-import io
 import logging
 import os
-import shutil
-import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
-from functools import lru_cache
-from pathlib import Path
-from typing import Any, BinaryIO, Callable, Dict, List, Optional, Set, Tuple, Union, cast
+from typing import Any, BinaryIO, Callable, Dict, List, Optional, Union
 from urllib.parse import urlparse
 
 import httpx

@@ -5,20 +5,14 @@ to MCP clients following the Model Context Protocol specification.
 This version uses a modular approach with standardized parameter parsing and error handling.
 """
 
-import asyncio
 import logging
 import os
-import sys
-from datetime import datetime
-from pathlib import Path
-from typing import Any, Dict, List, Optional
 
 from mcp.server.fastmcp import FastMCP
 
 from yaraflux_mcp_server.auth import init_user_db
 from yaraflux_mcp_server.config import settings
 from yaraflux_mcp_server.schema import TOOL_SCHEMAS
-from yaraflux_mcp_server.storage import get_storage_client
 from yaraflux_mcp_server.utils import register_tool_with_schema
 from yaraflux_mcp_server.yara_service import yara_service
 

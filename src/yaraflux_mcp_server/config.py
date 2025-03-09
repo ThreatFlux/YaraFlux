@@ -55,14 +55,14 @@ class Settings(BaseSettings):
     PORT: int = Field(default=8000, description="Port to bind server")
 
     @validator("STORAGE_DIR", "YARA_RULES_DIR", "YARA_SAMPLES_DIR", "YARA_RESULTS_DIR", pre=True)
-    def ensure_path_exists(cls, v):
+    def ensure_path_exists(cls, v: Any) -> Path:
         """Ensure paths exist and are valid."""
         path = Path(v)
         os.makedirs(path, exist_ok=True)
         return path
 
     @validator("USE_MINIO", "MINIO_ENDPOINT", "MINIO_ACCESS_KEY", "MINIO_SECRET_KEY")
-    def validate_minio_settings(cls, v, values, **kwargs):
+    def validate_minio_settings(cls, v: Any, values: Dict[str, Any], **kwargs: Any) -> Any:
         """Validate MinIO settings if USE_MINIO is True."""
         field = kwargs.get("field")
 

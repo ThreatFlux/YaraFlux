@@ -8,7 +8,6 @@ error handling and parameter validation.
 import logging
 import os
 import tempfile
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -119,7 +118,7 @@ def validate_yara_rule(content: str) -> Dict[str, Any]:
 
         try:
             # Try to directly validate using YARA
-            import yara
+            import yara # noqa: F401
 
             # This will compile the rule but not save it
             compiled_rule = yara.compile(source=content)
@@ -312,6 +311,8 @@ def import_threatflux_rules(url: Optional[str] = None, branch: str = "master") -
         with tempfile.TemporaryDirectory() as temp_dir:
             # Set up paths
             temp_path = Path(temp_dir)
+            if not temp_path.exists():
+                temp_path.mkdir(parents=True)
 
             # Clone or download the repository
             if "github.com" in url:
@@ -360,8 +361,6 @@ def import_threatflux_rules(url: Optional[str] = None, branch: str = "master") -
                     directories = ["malware", "general", "packer", "persistence"]
 
                     for directory in directories:
-                        dir_url = f"{import_path}/{directory}"
-
                         try:
                             # This is a simple approach, in a real implementation, you'd need to
                             # get the directory listing from the GitHub API or parse HTML

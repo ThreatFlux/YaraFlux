@@ -8,8 +8,6 @@ making it available for Claude Desktop integration.
 
 import logging
 import os
-import sys
-from pathlib import Path
 
 from yaraflux_mcp_server.auth import init_user_db
 from yaraflux_mcp_server.config import settings

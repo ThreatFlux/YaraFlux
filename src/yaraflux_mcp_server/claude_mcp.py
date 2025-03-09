@@ -8,14 +8,13 @@ better organization and extensibility.
 """
 
 import logging
-from typing import Any, Callable, Dict, List
+from typing import Any, Dict, List
 
 from fastapi import FastAPI
 
 # Import from the new modular package
 from .mcp_tools import ToolRegistry
 from .mcp_tools import init_fastapi as init_fastapi_routes
-from .mcp_tools import register_tool
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

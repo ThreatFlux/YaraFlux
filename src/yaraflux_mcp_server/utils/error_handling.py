@@ -6,12 +6,20 @@ the YaraFlux MCP Server, ensuring consistent error responses and logging.
 
 import logging
 import traceback
-from typing import Any, Dict, Optional, Type, Union
+from typing import Any, Callable, Dict, Optional, Protocol, Type, TypeVar
 
 from yaraflux_mcp_server.yara_service import YaraError
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+# Type definitions
+T = TypeVar('T')
+E = TypeVar('E', bound=Exception)
+
+class ErrorHandler(Protocol):
+    """Protocol for error handler functions."""
+    def __call__(self, error: Exception) -> Dict[str, Any]: ...
 
 
 def format_error_message(error: Exception) -> str:
@@ -26,15 +34,15 @@ def format_error_message(error: Exception) -> str:
     # Different error types may need different formatting
     if isinstance(error, YaraError):
         return f"YARA error: {str(error)}"
-    elif isinstance(error, ValueError):
+    if isinstance(error, ValueError):
         return f"Invalid parameter: {str(error)}"
-    elif isinstance(error, FileNotFoundError):
+    if isinstance(error, FileNotFoundError):
         return f"File not found: {str(error)}"
-    elif isinstance(error, PermissionError):
+    if isinstance(error, PermissionError):
         return f"Permission denied: {str(error)}"
-    else:
-        # Generic error message for other exceptions
-        return f"Error: {str(error)}"
+    
+    # Generic error message for other exceptions
+    return f"Error: {str(error)}"
 
 
 def handle_tool_error(
@@ -71,7 +79,10 @@ def handle_tool_error(
 
 
 def safe_execute(
-    func_name: str, operation: callable, error_handlers: Optional[Dict[Type[Exception], callable]] = None, **kwargs
+    func_name: str, 
+    operation: Callable[..., T], 
+    error_handlers: Optional[Dict[Type[Exception], Callable[[Exception], Dict[str, Any]]]] = None, 
+    **kwargs: Any
 ) -> Dict[str, Any]:
     """Safely execute an operation with standardized error handling.
 

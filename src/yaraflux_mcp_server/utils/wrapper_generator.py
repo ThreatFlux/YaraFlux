@@ -7,7 +7,7 @@ and error handling.
 
 import inspect
 import logging
-from typing import Any, Callable, Dict, Optional, Type, get_type_hints
+from typing import Any, Callable, Dict, Optional, get_type_hints
 
 from mcp.server.fastmcp import FastMCP
 

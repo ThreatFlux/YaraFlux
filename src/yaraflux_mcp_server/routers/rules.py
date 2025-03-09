@@ -5,7 +5,6 @@ adding, updating, and deleting rules.
 """
 
 import logging
-import os
 from datetime import datetime
 from typing import List, Optional
 

@@ -4,13 +4,12 @@ This module provides API endpoints for file management, including upload, downlo
 listing, and analysis of files.
 """
 
-import base64
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import Response
 
 from yaraflux_mcp_server.auth import get_current_active_user, validate_admin
 from yaraflux_mcp_server.models import (

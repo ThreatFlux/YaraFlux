@@ -7,7 +7,7 @@ from URLs and retrieving scan results.
 import logging
 import os
 import tempfile
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status

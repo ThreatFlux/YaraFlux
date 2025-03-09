@@ -6,7 +6,7 @@ including the decorator system and FastAPI integration helpers.
 
 import inspect
 import logging
-from typing import Any, Callable, Dict, List, Type, get_args, get_origin, get_type_hints
+from typing import Any, Callable, Dict, List, get_origin, get_type_hints
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

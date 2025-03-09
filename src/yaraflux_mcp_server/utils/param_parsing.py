@@ -8,7 +8,7 @@ against parameter schemas.
 import json
 import logging
 import urllib.parse
-from typing import Any, Dict, List, Optional, Type, Union, get_args, get_origin, get_type_hints
+from typing import Any, Dict, List, Optional, Type, Union, get_args, get_origin
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -121,25 +121,26 @@ def convert_param_type(value: str, param_type: Type) -> Any:
 
 
 def extract_typed_params(
-    params_dict: Dict[str, str], param_types: Dict[str, Type], param_defaults: Dict[str, Any] = None
+    params_dict: Dict[str, str], 
+    param_types: Dict[str, Type], 
+    param_defaults: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """Extract and type-convert parameters from a dictionary based on type hints.
-
+    
     Args:
         params_dict: Dictionary of string parameters
         param_types: Dictionary mapping parameter names to their types
         param_defaults: Optional dictionary of default values
-
+        
     Returns:
         Dictionary of typed parameters
-
+        
     Raises:
         ValueError: If a required parameter is missing or cannot be converted
     """
-    result = {}
-
-    if param_defaults is None:
-        param_defaults = {}
+    result: Dict[str, Any] = {}
+    
+    defaults: Dict[str, Any] = {} if param_defaults is None else param_defaults
 
     for name, param_type in param_types.items():
         # Get parameter value (use default if not provided)

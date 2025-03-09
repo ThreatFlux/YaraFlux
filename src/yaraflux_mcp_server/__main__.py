@@ -5,8 +5,6 @@ python -m yaraflux_mcp_server
 """
 
 import logging
-from pathlib import Path
-
 import click
 import uvicorn
 
@@ -18,9 +16,9 @@ logger = logging.getLogger(__name__)
 
 
 @click.group()
-def cli():
+def cli() -> None:
     """YaraFlux MCP Server CLI."""
-    pass
+    # No operation needed for group command
 
 
 @cli.command()
@@ -28,7 +26,7 @@ def cli():
 @click.option("--port", default=settings.PORT, type=int, help="Port to bind the server to")
 @click.option("--debug", is_flag=True, default=settings.DEBUG, help="Enable debug mode with auto-reload")
 @click.option("--workers", default=1, type=int, help="Number of worker processes")
-def run(host: str, port: int, debug: bool, workers: int):
+def run(host: str, port: int, debug: bool, workers: int) -> None:
     """Run the YaraFlux MCP Server."""
     logger.info(f"Starting YaraFlux MCP Server on {host}:{port}")
 
@@ -55,14 +53,10 @@ def run(host: str, port: int, debug: bool, workers: int):
 @cli.command()
 @click.option("--url", default=None, help="URL to the ThreatFlux YARA-Rules repository")
 @click.option("--branch", default="master", help="Branch to import rules from")
-def import_rules(url: str, branch: str):
+def import_rules(url: str, branch: str) -> None:
     """Import ThreatFlux YARA rules."""
-    # Import locally to avoid circular imports
-    from yaraflux_mcp_server.app import create_app
+    # Import dependencies inline to avoid circular imports
     from yaraflux_mcp_server.mcp_tools import import_threatflux_rules
-
-    # Create app to initialize everything
-    app = create_app()
 
     # Import rules
     logger.info(f"Importing rules from {url or 'default ThreatFlux repository'}")

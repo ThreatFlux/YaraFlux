@@ -6,7 +6,7 @@ It uses standardized error handling and parameter validation.
 
 import base64
 import logging
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from yaraflux_mcp_server.mcp_tools.base import register_tool
 from yaraflux_mcp_server.storage import get_storage_client

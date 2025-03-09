@@ -5,7 +5,6 @@ from the new modular mcp_tools package.
 """
 
 import logging
-from typing import Any, Dict, List, Optional
 
 # Configure logging
 logger = logging.getLogger(__name__)
