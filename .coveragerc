@@ -1,0 +1,32 @@
+[run]
+source = src/yaraflux_mcp_server
+omit =
+    # Exclude tests
+    tests/*
+    # Exclude initialization files
+    src/yaraflux_mcp_server/__init__.py
+    src/yaraflux_mcp_server/mcp_tools/__init__.py
+    src/yaraflux_mcp_server/routers/__init__.py
+    src/yaraflux_mcp_server/storage/__init__.py
+    src/yaraflux_mcp_server/utils/__init__.py
+    # Exclude legacy modules
+    src/yaraflux_mcp_server/mcp_tools.py
+    src/yaraflux_mcp_server/storage.py
+
+[report]
+exclude_lines =
+    # Skip any pragma comments
+    pragma: no cover
+    # Skip defensive assertion code
+    raise NotImplementedError
+    # Skip abstract methods
+    @abstractmethod
+    # Skip type checking blocks
+    if TYPE_CHECKING:
+    # Skip debug-only code
+    if settings.DEBUG:
+    # Skip main execution blocks
+    if __name__ == .__main__.:
+
+[html]
+directory = htmlcov

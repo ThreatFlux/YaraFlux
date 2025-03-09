@@ -25,6 +25,7 @@ class TokenData(BaseModel):
     username: str
     role: UserRole
     exp: Optional[datetime] = None
+    refresh: Optional[bool] = None
 
 
 class Token(BaseModel):
@@ -47,6 +48,8 @@ class UserInDB(User):
     """User model as stored in database with hashed password."""
 
     hashed_password: str
+    created: datetime = Field(default_factory=lambda: datetime.now())
+    last_login: Optional[datetime] = None
 
 
 class YaraMatch(BaseModel):

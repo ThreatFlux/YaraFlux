@@ -223,11 +223,13 @@ def run_server(transport_mode="http"):
         mcp.on_connect = lambda: logger.info("MCP connection established")
         mcp.on_disconnect = lambda: logger.info("MCP connection closed")
 
+        # Import asyncio here to ensure it's available for both modes
+        import asyncio
+
         # Run with appropriate transport
         if transport_mode == "stdio":
             logger.info("Starting MCP server with stdio transport")
-            import asyncio
-
+            # Import stdio_server here since it's only needed for stdio mode
             from mcp.server.stdio import stdio_server
 
             async def run_stdio():

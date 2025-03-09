@@ -63,14 +63,15 @@ def convert_param_type(value: str, param_type: Type) -> Any:
     args = get_args(param_type)
 
     # Handle Optional types
-    if origin is Union and type(None) in args:
+    is_optional = origin is Union and type(None) in args
+    if is_optional:
         # If it's Optional[X], extract X
         for arg in args:
             if arg is not type(None):
                 param_type = arg
                 break
-        # If value is empty and type is optional, return None
-        if not value:
+        # If value is empty, "null", or "None" and type is optional, return None
+        if not value or (isinstance(value, str) and value.lower() in ("null", "none")):
             return None
 
     try:
@@ -143,8 +144,14 @@ def extract_typed_params(
     defaults: Dict[str, Any] = {} if param_defaults is None else param_defaults
 
     for name, param_type in param_types.items():
-        # Get parameter value (use default if not provided)
-        value = params_dict.get(name, param_defaults.get(name, None))
+        # Get parameter value (use default if provided)
+        if name in params_dict:
+            value = params_dict[name]
+        elif name in defaults:
+            value = defaults[name]
+        else:
+            # Skip parameters that aren't provided and don't have defaults
+            continue
 
         # Skip None values
         if value is None:
@@ -156,7 +163,7 @@ def extract_typed_params(
     return result
 
 
-def parse_and_validate_params(params_str: str, param_schema: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+def parse_and_validate_params(params_str: str, param_schema: Dict[str, Any]) -> Dict[str, Any]:
     """Parse a URL-encoded string and validate against a parameter schema.
 
     Args:
@@ -173,29 +180,77 @@ def parse_and_validate_params(params_str: str, param_schema: Dict[str, Dict[str,
     params_dict = parse_params(params_str)
     result = {}
 
-    # Extract parameter types and defaults
+    # Extract parameter types and defaults from schema
     param_types = {}
     param_defaults = {}
+    required_params = []
 
-    for name, schema in param_schema.items():
-        param_type = schema.get("type", str)
-        param_types[name] = param_type
+    # Handle JSON Schema style format
+    if "properties" in param_schema:
+        properties = param_schema.get("properties", {})
+        
+        # Extract required params list if it exists
+        if "required" in param_schema:
+            required_params = param_schema.get("required", [])
+        
+        # Process each property
+        for name, prop_schema in properties.items():
+            # Extract type
+            type_value = prop_schema.get("type")
+            if type_value == "string":
+                param_types[name] = str
+            elif type_value == "integer":
+                param_types[name] = int
+            elif type_value == "number":
+                param_types[name] = float
+            elif type_value == "boolean":
+                param_types[name] = bool
+            elif type_value == "array":
+                # Handle arrays, optionally with item type
+                items = prop_schema.get("items", {})
+                item_type = items.get("type", "string")
+                if item_type == "string":
+                    param_types[name] = List[str]
+                elif item_type == "integer":
+                    param_types[name] = List[int]
+                elif item_type == "number":
+                    param_types[name] = List[float]
+                else:
+                    param_types[name] = List[Any]
+            elif type_value == "object":
+                param_types[name] = Dict[str, Any]
+            else:
+                param_types[name] = str  # Default to string
 
-        if "default" in schema:
-            param_defaults[name] = schema["default"]
+            # Extract default value if present
+            if "default" in prop_schema:
+                param_defaults[name] = prop_schema["default"]
+    else:
+        # Handle simple schema format
+        for name, schema in param_schema.items():
+            param_type = schema.get("type", str)
+            param_types[name] = param_type
+
+            if "default" in schema:
+                param_defaults[name] = schema["default"]
+            
+            if schema.get("required", False):
+                required_params.append(name)
 
     # Convert parameters to their types
     typed_params = extract_typed_params(params_dict, param_types, param_defaults)
 
     # Validate required parameters
-    for name, schema in param_schema.items():
-        if schema.get("required", False) and name not in typed_params:
+    for name in required_params:
+        if name not in typed_params:
             raise ValueError(f"Required parameter '{name}' is missing")
 
-        # Add to result
-        if name in typed_params:
-            result[name] = typed_params[name]
-        elif name in param_defaults:
-            result[name] = param_defaults[name]
+    # Add all parameters to the result
+    result.update(typed_params)
+    
+    # Add any defaults not already in the result
+    for name, value in param_defaults.items():
+        if name not in result:
+            result[name] = value
 
     return result
