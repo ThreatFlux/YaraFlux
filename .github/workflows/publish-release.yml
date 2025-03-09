@@ -1,0 +1,131 @@
+name: Publish Release
+
+on:
+  workflow_run:
+    workflows: ["Version Auto-increment"]
+    types:
+      - completed
+    branches: [main]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    permissions:
+      contents: write
+      packages: write
+    
+    steps:
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38  # v5.4.0
+      with:
+        python-version: '3.13'
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build
+
+    - name: Get version
+      id: get_version
+      run: |
+        if [ -f "pyproject.toml" ]; then
+          VERSION=$(grep -oP '(?<=version = ")[^"]*' pyproject.toml)
+        else
+          VERSION=$(grep -oP '(?<=version=")[^"]*' setup.py)
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Build package
+      run: python -m build
+
+    - name: Build Docker images
+      run: |
+        # Build all stages
+        docker build --target builder -t threatflux/yaraflux-mcp-server:${{ steps.get_version.outputs.version }}-builder .
+        docker build --target development -t threatflux/yaraflux-mcp-server:${{ steps.get_version.outputs.version }}-dev .
+        docker build --target production -t threatflux/yaraflux-mcp-server:${{ steps.get_version.outputs.version }} .
+        
+        # Tag latest for production
+        docker tag threatflux/yaraflux-mcp-server:${{ steps.get_version.outputs.version }} threatflux/yaraflux-mcp-server:latest
+
+    - name: Generate release notes
+      id: release_notes
+      run: |
+        # Get commits since last tag
+        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+        if [ -z "$LAST_TAG" ]; then
+          # If no previous tag, get all commits
+          git log --pretty=format:"- %s" > RELEASE_NOTES.md
+        else
+          git log --pretty=format:"- %s" $LAST_TAG..HEAD > RELEASE_NOTES.md
+        fi
+        
+        # Add header
+        echo "# Release v${{ steps.get_version.outputs.version }}" | cat - RELEASE_NOTES.md > temp && mv temp RELEASE_NOTES.md
+        
+        # Add Docker image information
+        echo -e "\n## Docker Images\n" >> RELEASE_NOTES.md
+        echo "- \`threatflux/yaraflux-mcp-server:${{ steps.get_version.outputs.version }}\` (production)" >> RELEASE_NOTES.md
+        echo "- \`threatflux/yaraflux-mcp-server:${{ steps.get_version.outputs.version }}-dev\` (development)" >> RELEASE_NOTES.md
+        echo "- \`threatflux/yaraflux-mcp-server:${{ steps.get_version.outputs.version }}-builder\` (builder)" >> RELEASE_NOTES.md
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda  # v2.2.1
+      with:
+        tag_name: v${{ steps.get_version.outputs.version }}
+        name: Release v${{ steps.get_version.outputs.version }}
+        body_path: RELEASE_NOTES.md
+        draft: false
+        prerelease: false
+        files: |
+          dist/*.tar.gz
+          dist/*.whl
+          RELEASE_NOTES.md
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1  # v4.6.1
+      with:
+        name: release-artifacts-v${{ steps.get_version.outputs.version }}
+        path: |
+          dist/*.tar.gz
+          dist/*.whl
+          RELEASE_NOTES.md
+        retention-days: 30
+        if-no-files-found: error
+        compression-level: 9
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567  # v3.3.0
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Push Docker images
+      run: |
+        # Push versioned images
+        docker push threatflux/yaraflux-mcp-server:${{ steps.get_version.outputs.version }}-builder
+        docker push threatflux/yaraflux-mcp-server:${{ steps.get_version.outputs.version }}-dev
+        docker push threatflux/yaraflux-mcp-server:${{ steps.get_version.outputs.version }}
+        
+        # Push latest tag
+        docker push threatflux/yaraflux-mcp-server:latest
+
+    - name: Notify on failure
+      if: failure()
+      uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+      with:
+        script: |
+          github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: 'Release workflow failed for v${{ steps.get_version.outputs.version }}',
+            body: 'The release workflow failed. Please check the workflow logs for details.'
+          })

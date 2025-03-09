@@ -1,0 +1,90 @@
+name: Version Auto-increment
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - 'pyproject.toml'
+      - 'setup.py'
+      - '.github/workflows/**'
+      - '**.md'
+
+jobs:
+  version-bump:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up Python
+      uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38  # v5.4.0
+      with:
+        python-version: '3.13'
+
+    - name: Get current version
+      id: current_version
+      run: |
+        # Try pyproject.toml first
+        if [ -f "pyproject.toml" ]; then
+          VERSION=$(grep -oP '(?<=version = ")[^"]*' pyproject.toml)
+        else
+          # Fallback to setup.py
+          VERSION=$(grep -oP '(?<=version=")[^"]*' setup.py)
+        fi
+        echo "Current version: $VERSION"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Increment version
+      id: increment_version
+      run: |
+        # Parse version components
+        IFS='.' read -r -a version_parts <<< "${{ steps.current_version.outputs.version }}"
+        MAJOR="${version_parts[0]}"
+        MINOR="${version_parts[1]}"
+        PATCH="${version_parts[2]}"
+        
+        # Increment patch version
+        NEW_PATCH=$((PATCH + 1))
+        NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+        echo "New version: $NEW_VERSION"
+        echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+        # Update version in files
+        if [ -f "pyproject.toml" ]; then
+          sed -i "s/version = \"${{ steps.current_version.outputs.version }}\"/version = \"$NEW_VERSION\"/" pyproject.toml
+        fi
+        if [ -f "setup.py" ]; then
+          sed -i "s/version=\"${{ steps.current_version.outputs.version }}\"/version=\"$NEW_VERSION\"/" setup.py
+        fi
+        if [ -f "src/yaraflux_mcp_server/__init__.py" ]; then
+          sed -i "s/__version__ = \"${{ steps.current_version.outputs.version }}\"/__version__ = \"$NEW_VERSION\"/" src/yaraflux_mcp_server/__init__.py
+        fi
+
+    - name: Update Docker labels
+      run: |
+        if [ -f "Dockerfile" ]; then
+          sed -i "s/version=\".*\"/version=\"${{ steps.increment_version.outputs.new_version }}\"/" Dockerfile
+        fi
+
+    - name: Create version bump commit
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add pyproject.toml setup.py Dockerfile src/yaraflux_mcp_server/__init__.py
+        git commit -m "chore: bump version to ${{ steps.increment_version.outputs.new_version }}"
+        git tag -a "v${{ steps.increment_version.outputs.new_version }}" -m "Version ${{ steps.increment_version.outputs.new_version }}"
+
+    - name: Push changes
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: ${{ github.ref }}
+        tags: true
+
+    outputs:
+      new_version: ${{ steps.increment_version.outputs.new_version }}
