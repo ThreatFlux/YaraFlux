@@ -9,84 +9,119 @@ A Model Context Protocol (MCP) server for YARA scanning, providing LLMs with cap
 
 ## 📋 Overview
 
-YaraFlux MCP Server enables AI assistants to perform YARA rule-based threat analysis through a standardized Model Context Protocol interface. The server supports comprehensive rule management, secure scanning, and detailed result analysis.
+YaraFlux MCP Server enables AI assistants to perform YARA rule-based threat analysis through the standardized Model Context Protocol interface. The server integrates YARA scanning with modern AI assistants, supporting comprehensive rule management, secure scanning, and detailed result analysis through a modular architecture.
+
+## 🧩 Architecture Overview
+
+```
++------------------------------------------+
+|              AI Assistant                |
++--------------------+---------------------+
+                    |
+                    | Model Context Protocol
+                    |
++--------------------v---------------------+
+|              YaraFlux MCP Server         |
+|                                          |
+|  +----------------+    +---------------+ |
+|  | MCP Server     |    | Tool Registry | |
+|  +-------+--------+    +-------+-------+ |
+|          |                     |         |
+|  +-------v--------+    +-------v-------+ |
+|  | YARA Service   |    | Storage Layer | |
+|  +----------------+    +---------------+ |
+|                                          |
++------------------------------------------+
+          |                   |
+ +-----------------+  +---------------+
+ | YARA Engine     |  | Storage       |
+ | - Rule Compiling|  | - Local FS    |
+ | - File Scanning |  | - MinIO/S3    |
+ +-----------------+  +---------------+
+```
+
+YaraFlux follows a modular architecture that separates concerns between:
+- **MCP Integration Layer**: Handles communication with AI assistants
+- **Tool Implementation Layer**: Implements YARA scanning and management functionality
+- **Storage Abstraction Layer**: Provides flexible storage options
+- **YARA Engine Integration**: Leverages YARA for scanning and rule management
+
+For detailed architecture diagrams, see the [Architecture Documentation](docs/architecture_diagram.md).
 
 ## ✨ Features
 
-- 🔍 YARA scanning integration with Model Context Protocol
-- 📝 Comprehensive YARA rule management (create, edit, delete, import)
-- 🔐 JWT authentication for secure API access
-- 🐳 Docker deployment support with easy configuration
-- 📦 MinIO/S3 storage option for rules, samples and results
-- 🔄 Auto-import of ThreatFlux YARA rules
-- 🌐 RESTful API with complete Swagger documentation
-- 🤖 Direct AI assistant integration via MCP
-- 🔍 URL and data scanning capabilities
-- 📊 Detailed scan results with match highlighting
-- 🧪 19 integrated MCP tools for comprehensive functionality
-- 📊 Hex view and string extraction for deep file analysis
-- 🔄 Modular architecture with optimized package structure
+- 🔄 **Modular Architecture**
+  - Clean separation of MCP integration, tool implementation, and storage
+  - Standardized parameter parsing and error handling
+  - Flexible storage backend with local and S3/MinIO options
+
+- 🤖 **MCP Integration**
+  - 19 integrated MCP tools for comprehensive functionality
+  - Optimized for Claude Desktop integration
+  - Direct file analysis from within conversations
+  - Compatible with latest MCP protocol specification
+
+- 🔍 **YARA Scanning**
+  - URL and file content scanning
+  - Detailed match information with context
+  - Scan result storage and retrieval
+  - Performance-optimized scanning engine
+
+- 📝 **Rule Management**
+  - Create, read, update, delete YARA rules
+  - Rule validation with detailed error reporting
+  - Import rules from ThreatFlux repository
+  - Categorization by source (custom vs. community)
+
+- 📊 **File Analysis**
+  - Hexadecimal view for binary analysis
+  - String extraction with configurable parameters
+  - File metadata and hash information
+  - Secure file upload and storage
+
+- 🔐 **Security Features**
+  - JWT authentication for API access
+  - Non-root container execution
+  - Secure storage isolation
+  - Configurable access controls
 
 ## 🚀 Quick Start
 
-### Installation
+### Using Docker (Recommended)
 
 ```bash
-# Using pip
-pip install yaraflux-mcp-server
-
-# From source
+# Clone the repository
 git clone https://github.com/ThreatFlux/YaraFlux.git
 cd YaraFlux/
-make install
-```
 
-### Running the Server
-
-```bash
-# From Python package
-yaraflux-mcp-server run
-
-# From source
-make run
-```
-
-### Basic Usage
-
-```bash
-# Create a YARA rule
-yaraflux rules create test_rule --content '
-rule test_rule {
-    meta:
-        description = "Test rule"
-    strings:
-        $test = "test" nocase
-    condition:
-        $test
-}'
-
-# Scan a file
-yaraflux scan url https://example.com/file.txt --rules test_rule
-```
-
-## 🐳 Docker Deployment
-
-```bash
-# Build the image
+# Build the Docker image
 docker build -t yaraflux-mcp-server:latest .
 
 # Run the container
 docker run -p 8000:8000 \
-  --env JWT_SECRET_KEY=your-secret-key \
-  --env ADMIN_PASSWORD=your-admin-password \
-  --env DEBUG=true \
-  --env PYTHONUNBUFFERED=1 \
+  -e JWT_SECRET_KEY=your-secret-key \
+  -e ADMIN_PASSWORD=your-admin-password \
+  -e DEBUG=true \
   yaraflux-mcp-server:latest
+```
+
+### Installation from Source
+
+```bash
+# Clone the repository
+git clone https://github.com/ThreatFlux/YaraFlux.git
+cd YaraFlux/
+
+# Install dependencies (requires Python 3.13+)
+make install
+
+# Run the server
+make run
 ```
 
 ## 🧩 Claude Desktop Integration
 
-YaraFlux seamlessly integrates with Claude Desktop for AI-assisted YARA rule management and scanning.
+YaraFlux is designed for seamless integration with Claude Desktop through the Model Context Protocol.
 
 1. Build the Docker image:
 ```bash
@@ -113,30 +148,113 @@ docker build -t yaraflux-mcp-server:latest .
         "PYTHONUNBUFFERED=1",
         "yaraflux-mcp-server:latest"
       ],
-      "timeout": 1200,
       "disabled": false,
       "autoApprove": [
         "scan_url",
         "scan_data",
         "list_yara_rules",
         "get_yara_rule"
-      ],
-      "pipeMode": "binary"
+      ]
     }
   }
 }
 ```
 
+3. Restart Claude Desktop to activate the server.
+
+## 🛠️ Available MCP Tools
+
+YaraFlux exposes 19 integrated MCP tools:
+
+### Rule Management Tools
+- **list_yara_rules**: List available YARA rules with filtering options
+- **get_yara_rule**: Get a specific YARA rule's content and metadata
+- **validate_yara_rule**: Validate YARA rule syntax with detailed error reporting
+- **add_yara_rule**: Create a new YARA rule
+- **update_yara_rule**: Update an existing YARA rule
+- **delete_yara_rule**: Delete a YARA rule
+- **import_threatflux_rules**: Import rules from ThreatFlux GitHub repository
+
+### Scanning Tools
+- **scan_url**: Scan content from a URL with specified YARA rules
+- **scan_data**: Scan provided data (base64 encoded) with specified rules
+- **get_scan_result**: Retrieve detailed results from a previous scan
+
+### File Management Tools
+- **upload_file**: Upload a file for analysis or scanning
+- **get_file_info**: Get metadata about an uploaded file
+- **list_files**: List uploaded files with pagination and sorting
+- **delete_file**: Delete an uploaded file
+- **extract_strings**: Extract ASCII/Unicode strings from a file
+- **get_hex_view**: Get hexadecimal view of file content
+- **download_file**: Download an uploaded file
+
+### Storage Management Tools
+- **get_storage_info**: Get storage usage statistics
+- **clean_storage**: Remove old files to free up storage space
+
 ## 📚 Documentation
 
 Comprehensive documentation is available in the [docs/](docs/) directory:
 
+- [Architecture Diagrams](docs/architecture_diagram.md) - Visual representation of system architecture
+- [Code Analysis](docs/code_analysis.md) - Detailed code structure and recommendations
 - [Installation Guide](docs/installation.md) - Detailed setup instructions
 - [CLI Usage Guide](docs/cli.md) - Command-line interface documentation
 - [API Reference](docs/api.md) - REST API endpoints and usage
 - [YARA Rules Guide](docs/yara_rules.md) - Creating and managing YARA rules
 - [MCP Integration](docs/mcp.md) - Model Context Protocol integration details
+- [File Management](docs/file_management.md) - File handling capabilities
 - [Examples](docs/examples.md) - Real-world usage examples
+
+## 🗂️ Project Structure
+
+```
+yaraflux_mcp_server/
+├── src/
+│   └── yaraflux_mcp_server/
+│       ├── app.py                 # FastAPI application
+│       ├── auth.py                # JWT authentication and user management
+│       ├── config.py              # Configuration settings loader
+│       ├── models.py              # Pydantic models for requests/responses
+│       ├── mcp_server.py          # MCP server implementation
+│       ├── schema.py              # JSON schemas for tool parameters
+│       ├── utils/                 # Utility functions package
+│       │   ├── __init__.py        # Package initialization
+│       │   ├── error_handling.py  # Standardized error handling
+│       │   ├── param_parsing.py   # Parameter parsing utilities
+│       │   └── wrapper_generator.py # Tool wrapper generation
+│       ├── mcp_tools/             # Modular MCP tools package
+│       │   ├── __init__.py        # Package initialization
+│       │   ├── base.py            # Base tool registration utilities
+│       │   ├── file_tools.py      # File management tools
+│       │   ├── rule_tools.py      # YARA rule management tools
+│       │   ├── scan_tools.py      # Scanning tools
+│       │   └── storage_tools.py   # Storage management tools
+│       ├── storage/               # Storage implementation package
+│       │   ├── __init__.py        # Package initialization
+│       │   ├── base.py            # Base storage interface
+│       │   ├── factory.py         # Storage client factory
+│       │   ├── local.py           # Local filesystem storage
+│       │   └── minio.py           # MinIO/S3 storage
+│       ├── routers/               # API route definitions
+│       │   ├── __init__.py        # Package initialization
+│       │   ├── auth.py            # Authentication API routes
+│       │   ├── files.py           # File management API routes
+│       │   ├── rules.py           # YARA rule management API routes
+│       │   └── scan.py            # YARA scanning API routes
+│       ├── yara_service.py        # YARA rule management and scanning
+│       ├── __init__.py            # Package initialization
+│       └── __main__.py            # CLI entry point
+├── docs/                          # Documentation
+├── tests/                         # Test suite
+├── Dockerfile                     # Docker configuration
+├── entrypoint.sh                  # Container entrypoint script
+├── Makefile                       # Build automation
+├── pyproject.toml                 # Project metadata and dependencies
+├── requirements.txt               # Core dependencies
+└── requirements-dev.txt           # Development dependencies
+```
 
 ## 🧪 Development
 
@@ -150,57 +268,13 @@ make test
 # Code quality checks
 make lint
 make format
-make mypy
 make security-check
 
 # Generate test coverage report
 make coverage
-```
 
-## 🗂️ Project Structure
-
-```
-yaraflux_mcp_server/
-├── src/
-│   └── yaraflux_mcp_server/
-│       ├── app.py                 # FastAPI application
-│       ├── auth.py                # JWT authentication and user management
-│       ├── config.py              # Configuration settings loader
-│       ├── models.py              # Pydantic models for requests/responses
-│       ├── mcp_server.py          # MCP server implementation
-│       ├── mcp_tools.py           # Legacy MCP tools module
-│       ├── mcp_tools/             # Modular MCP tools package
-│       │   ├── __init__.py        # Package initialization
-│       │   ├── base.py            # Base tool registration utilities
-│       │   ├── file_tools.py      # File management tools
-│       │   ├── rule_tools.py      # YARA rule management tools
-│       │   ├── scan_tools.py      # Scanning tools
-│       │   └── storage_tools.py   # Storage management tools
-│       ├── run_mcp.py             # MCP server entry point
-│       ├── storage.py             # Storage abstraction
-│       ├── storage/               # Storage implementation package
-│       │   ├── __init__.py        # Package initialization
-│       │   ├── base.py            # Base storage interface
-│       │   ├── factory.py         # Storage client factory
-│       │   ├── local.py           # Local filesystem storage
-│       │   └── minio.py           # MinIO/S3 storage
-│       ├── yara_service.py        # YARA rule management and scanning
-│       ├── __init__.py            # Package initialization
-│       ├── __main__.py            # CLI entry point
-│       └── routers/
-│           ├── auth.py            # Authentication API routes
-│           ├── rules.py           # YARA rule management API routes
-│           ├── scan.py            # YARA scanning API routes
-│           ├── files.py           # File management API routes
-│           └── __init__.py
-├── tests/                         # Test suite
-├── examples/                      # Example configurations
-├── Dockerfile                     # Docker configuration
-├── install_claude.sh              # Claude Desktop installation script
-├── Makefile                       # Build automation
-├── pyproject.toml                 # Project metadata and dependencies
-├── requirements.txt               # Core dependencies
-└── requirements-dev.txt           # Development dependencies
+# Run development server
+make run
 ```
 
 ## 🌐 API Documentation
@@ -210,32 +284,6 @@ Interactive API documentation available at:
 - ReDoc: http://localhost:8000/redoc
 
 For detailed API documentation, see [API Reference](docs/api.md).
-
-## 📋 Available Make Commands
-
-Run `make help` to see all available commands:
-
-```
-YaraFlux MCP Server Makefile
-
-Available targets:
-  all             : Clean, install, test, and lint
-  clean           : Clean up build artifacts and caches
-  install         : Install dependencies in a virtual environment
-  dev-setup       : Set up development environment
-  lock            : Generate lock file for reproducible builds
-  sync            : Sync dependencies from lock file
-  test            : Run tests
-  coverage        : Generate test coverage report
-  lint            : Run linters
-  format          : Format code using Black and isort
-  mypy            : Run type checker
-  security-check  : Run security checks
-  docker-build    : Build Docker image
-  docker-run      : Run Docker container
-  run             : Run development server
-  import-rules    : Import ThreatFlux YARA rules
-```
 
 ## 🤝 Contributing
 
@@ -251,8 +299,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 💖Donate or ask for features
+## 💖 Donate or Ask for Features
 
-patreon.com/vtriple
-
-paypal.me/ThreatFlux
+- [Patreon](https://patreon.com/vtriple)
+- [PayPal](https://paypal.me/ThreatFlux)

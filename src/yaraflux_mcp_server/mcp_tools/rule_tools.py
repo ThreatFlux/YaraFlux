@@ -1,7 +1,8 @@
 """YARA rule management tools for Claude MCP integration.
 
 This module provides tools for managing YARA rules, including listing,
-adding, updating, validating, and deleting rules.
+adding, updating, validating, and deleting rules. It uses standardized
+error handling and parameter validation.
 """
 
 import logging
@@ -13,8 +14,9 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 
-from ..yara_service import YaraError, yara_service
-from .base import register_tool
+from yaraflux_mcp_server.mcp_tools.base import register_tool
+from yaraflux_mcp_server.utils.error_handling import safe_execute
+from yaraflux_mcp_server.yara_service import YaraError, yara_service
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -30,15 +32,26 @@ def list_yara_rules(source: Optional[str] = None) -> List[Dict[str, Any]]:
     Returns:
         List of YARA rule metadata objects
     """
-    try:
+
+    def _list_yara_rules(source: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Implementation function for list_yara_rules."""
+        # Validate source if provided
+        if source and source not in ["custom", "community", "all"]:
+            raise ValueError(f"Invalid source: {source}. Must be 'custom', 'community', or 'all'")
+
         # Get rules from the YARA service
-        rules = yara_service.list_rules(source)
+        rules = yara_service.list_rules(None if source == "all" else source)
 
         # Convert to dict for serialization
         return [rule.dict() for rule in rules]
-    except YaraError as e:
-        logger.error(f"Error listing YARA rules: {str(e)}")
-        return []
+
+    # Execute with standardized error handling
+    result = safe_execute("list_yara_rules", _list_yara_rules, source=source)
+
+    # Extract result value or return empty list on error
+    if result.get("success", False):
+        return result.get("result", [])
+    return []
 
 
 @register_tool()
@@ -52,7 +65,13 @@ def get_yara_rule(rule_name: str, source: str = "custom") -> Dict[str, Any]:
     Returns:
         Rule content and metadata
     """
-    try:
+
+    def _get_yara_rule(rule_name: str, source: str) -> Dict[str, Any]:
+        """Implementation function for get_yara_rule."""
+        # Validate source
+        if source not in ["custom", "community"]:
+            raise ValueError(f"Invalid source: {source}. Must be 'custom' or 'community'")
+
         # Get rule content
         content = yara_service.get_rule(rule_name, source)
 
@@ -71,9 +90,15 @@ def get_yara_rule(rule_name: str, source: str = "custom") -> Dict[str, Any]:
             "content": content,
             "metadata": metadata.dict() if metadata else {},
         }
-    except YaraError as e:
-        logger.error(f"Error getting YARA rule {rule_name}: {str(e)}")
-        return {"name": rule_name, "source": source, "error": str(e)}
+
+    # Execute with standardized error handling
+    return safe_execute(
+        "get_yara_rule",
+        _get_yara_rule,
+        rule_name=rule_name,
+        source=source,
+        error_handlers={YaraError: lambda e: {"name": rule_name, "source": source, "error": str(e)}},
+    )
 
 
 @register_tool()
@@ -84,22 +109,48 @@ def validate_yara_rule(content: str) -> Dict[str, Any]:
         content: YARA rule content to validate
 
     Returns:
-        Validation result
+        Validation result with detailed error information if invalid
     """
-    try:
-        # Create a temporary rule name for validation
-        temp_rule_name = f"validate_{int(datetime.utcnow().timestamp())}.yar"
 
-        # Attempt to add the rule (this will validate it)
-        yara_service.add_rule(temp_rule_name, content)
+    def _validate_yara_rule(content: str) -> Dict[str, Any]:
+        """Implementation function for validate_yara_rule."""
+        if not content.strip():
+            raise ValueError("Rule content cannot be empty")
 
-        # Rule is valid, delete it
-        yara_service.delete_rule(temp_rule_name)
+        try:
+            # Try to directly validate using YARA
+            import yara
 
-        return {"valid": True, "message": "Rule is valid"}
-    except YaraError as e:
-        logger.error(f"YARA rule validation error: {str(e)}")
-        return {"valid": False, "message": str(e)}
+            # This will compile the rule but not save it
+            compiled_rule = yara.compile(source=content)
+
+            # If we reach here, the rule is valid
+            return {"valid": True, "message": "Rule is valid"}
+
+        except Exception as e:
+            # Capture the original compilation error
+            error_message = str(e)
+            logger.debug(f"YARA compilation error: {error_message}")
+            raise YaraError(f"Rule validation failed: {error_message}")
+
+    # Execute with standardized error handling
+    result = safe_execute(
+        "validate_yara_rule",
+        _validate_yara_rule,
+        content=content,
+        error_handlers={
+            YaraError: lambda e: {"valid": False, "message": str(e), "error_type": "YaraError"},
+            ValueError: lambda e: {"valid": False, "message": str(e), "error_type": "ValueError"},
+            Exception: lambda e: {
+                "valid": False,
+                "message": f"Unexpected error: {str(e)}",
+                "error_type": e.__class__.__name__,
+            },
+        },
+    )
+
+    # Result will already have the right structure from error_handlers
+    return result
 
 
 @register_tool()
@@ -114,14 +165,38 @@ def add_yara_rule(name: str, content: str, source: str = "custom") -> Dict[str, 
     Returns:
         Result of the operation
     """
-    try:
+
+    def _add_yara_rule(name: str, content: str, source: str) -> Dict[str, Any]:
+        """Implementation function for add_yara_rule."""
+        # Validate source
+        if source not in ["custom", "community"]:
+            raise ValueError(f"Invalid source: {source}. Must be 'custom' or 'community'")
+
+        # Ensure rule name has .yar extension
+        if not name.endswith(".yar"):
+            name = f"{name}.yar"
+
+        # Validate content
+        if not content.strip():
+            raise ValueError("Rule content cannot be empty")
+
         # Add the rule
         metadata = yara_service.add_rule(name, content, source)
 
         return {"success": True, "message": f"Rule {name} added successfully", "metadata": metadata.dict()}
-    except YaraError as e:
-        logger.error(f"Error adding YARA rule {name}: {str(e)}")
-        return {"success": False, "message": str(e)}
+
+    # Execute with standardized error handling
+    return safe_execute(
+        "add_yara_rule",
+        _add_yara_rule,
+        name=name,
+        content=content,
+        source=source,
+        error_handlers={
+            YaraError: lambda e: {"success": False, "message": str(e)},
+            ValueError: lambda e: {"success": False, "message": str(e)},
+        },
+    )
 
 
 @register_tool()
@@ -136,14 +211,37 @@ def update_yara_rule(name: str, content: str, source: str = "custom") -> Dict[st
     Returns:
         Result of the operation
     """
-    try:
+
+    def _update_yara_rule(name: str, content: str, source: str) -> Dict[str, Any]:
+        """Implementation function for update_yara_rule."""
+        # Validate source
+        if source not in ["custom", "community"]:
+            raise ValueError(f"Invalid source: {source}. Must be 'custom' or 'community'")
+
+        # Ensure rule exists
+        yara_service.get_rule(name, source)  # Will raise YaraError if not found
+
+        # Validate content
+        if not content.strip():
+            raise ValueError("Rule content cannot be empty")
+
         # Update the rule
         metadata = yara_service.update_rule(name, content, source)
 
         return {"success": True, "message": f"Rule {name} updated successfully", "metadata": metadata.dict()}
-    except YaraError as e:
-        logger.error(f"Error updating YARA rule {name}: {str(e)}")
-        return {"success": False, "message": str(e)}
+
+    # Execute with standardized error handling
+    return safe_execute(
+        "update_yara_rule",
+        _update_yara_rule,
+        name=name,
+        content=content,
+        source=source,
+        error_handlers={
+            YaraError: lambda e: {"success": False, "message": str(e)},
+            ValueError: lambda e: {"success": False, "message": str(e)},
+        },
+    )
 
 
 @register_tool()
@@ -157,7 +255,13 @@ def delete_yara_rule(name: str, source: str = "custom") -> Dict[str, Any]:
     Returns:
         Result of the operation
     """
-    try:
+
+    def _delete_yara_rule(name: str, source: str) -> Dict[str, Any]:
+        """Implementation function for delete_yara_rule."""
+        # Validate source
+        if source not in ["custom", "community"]:
+            raise ValueError(f"Invalid source: {source}. Must be 'custom' or 'community'")
+
         # Delete the rule
         result = yara_service.delete_rule(name, source)
 
@@ -165,9 +269,18 @@ def delete_yara_rule(name: str, source: str = "custom") -> Dict[str, Any]:
             return {"success": True, "message": f"Rule {name} deleted successfully"}
         else:
             return {"success": False, "message": f"Rule {name} not found"}
-    except YaraError as e:
-        logger.error(f"Error deleting YARA rule {name}: {str(e)}")
-        return {"success": False, "message": str(e)}
+
+    # Execute with standardized error handling
+    return safe_execute(
+        "delete_yara_rule",
+        _delete_yara_rule,
+        name=name,
+        source=source,
+        error_handlers={
+            YaraError: lambda e: {"success": False, "message": str(e)},
+            ValueError: lambda e: {"success": False, "message": str(e)},
+        },
+    )
 
 
 @register_tool()
@@ -181,10 +294,17 @@ def import_threatflux_rules(url: Optional[str] = None, branch: str = "master") -
     Returns:
         Import result
     """
-    if url is None:
-        url = "https://github.com/ThreatFlux/YARA-Rules"
 
-    try:
+    def _import_threatflux_rules(url: Optional[str], branch: str) -> Dict[str, Any]:
+        """Implementation function for import_threatflux_rules."""
+        # Set default URL if not provided
+        if url is None:
+            url = "https://github.com/ThreatFlux/YARA-Rules"
+
+        # Validate branch
+        if not branch:
+            branch = "master"
+
         import_count = 0
         error_count = 0
 
@@ -296,6 +416,15 @@ def import_threatflux_rules(url: Optional[str] = None, branch: str = "master") -
             "import_count": import_count,
             "error_count": error_count,
         }
-    except Exception as e:
-        logger.error(f"Error importing rules from {url}: {str(e)}")
-        return {"success": False, "message": str(e)}
+
+    # Execute with standardized error handling
+    return safe_execute(
+        "import_threatflux_rules",
+        _import_threatflux_rules,
+        url=url,
+        branch=branch,
+        error_handlers={
+            YaraError: lambda e: {"success": False, "message": str(e)},
+            Exception: lambda e: {"success": False, "message": f"Error importing rules: {str(e)}"},
+        },
+    )

@@ -88,5 +88,54 @@ _import_module("scan_tools")
 _import_module("rule_tools")
 _import_module("storage_tools")
 
+# Import needed functions explicitly for direct access
+from .file_tools import (
+    delete_file,
+    download_file,
+    extract_strings,
+    get_file_info,
+    get_hex_view,
+    list_files,
+    upload_file,
+)
+from .rule_tools import (
+    add_yara_rule,
+    delete_yara_rule,
+    get_yara_rule,
+    import_threatflux_rules,
+    list_yara_rules,
+    update_yara_rule,
+    validate_yara_rule,
+)
+from .scan_tools import get_scan_result, scan_data, scan_url
+from .storage_tools import clean_storage, get_storage_info
+
 # Export public interface
-__all__ = ["register_tool", "init_fastapi", "ToolRegistry"]
+__all__ = [
+    "register_tool",
+    "init_fastapi",
+    "ToolRegistry",
+    # File tools
+    "upload_file",
+    "get_file_info",
+    "list_files",
+    "delete_file",
+    "extract_strings",
+    "get_hex_view",
+    "download_file",
+    # Rule tools
+    "list_yara_rules",
+    "get_yara_rule",
+    "validate_yara_rule",
+    "add_yara_rule",
+    "update_yara_rule",
+    "delete_yara_rule",
+    "import_threatflux_rules",
+    # Scan tools
+    "scan_url",
+    "scan_data",
+    "get_scan_result",
+    # Storage tools
+    "get_storage_info",
+    "clean_storage",
+]

@@ -1,18 +1,17 @@
 """File management tools for Claude MCP integration.
 
 This module provides tools for file operations including uploading, downloading,
-viewing hex dumps, and extracting strings from files.
+viewing hex dumps, and extracting strings from files. It uses standardized error
+handling and parameter validation.
 """
 
 import base64
-import hashlib
 import logging
-from datetime import datetime
-from typing import Any, Dict, List, Optional
-from uuid import UUID
+from typing import Any, Dict, List, Optional, Union
 
-from ..storage import get_storage_client
-from .base import register_tool
+from yaraflux_mcp_server.mcp_tools.base import register_tool
+from yaraflux_mcp_server.storage import StorageError, get_storage_client
+from yaraflux_mcp_server.utils.error_handling import safe_execute
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -36,27 +35,47 @@ def upload_file(
     Returns:
         File information including ID, size, and metadata
     """
-    try:
+
+    def _upload_file(data: str, file_name: str, encoding: str, metadata: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        """Implementation function for upload_file."""
+        # Validate parameters
+        if not data:
+            raise ValueError("File data cannot be empty")
+
+        if not file_name:
+            raise ValueError("File name cannot be empty")
+
+        if encoding not in ["base64", "text"]:
+            raise ValueError(f"Unsupported encoding: {encoding}")
+
         # Decode the data
         if encoding == "base64":
             try:
                 decoded_data = base64.b64decode(data)
             except Exception as e:
-                logger.error(f"Invalid base64 data: {str(e)}")
-                return {"success": False, "message": f"Invalid base64 data: {str(e)}"}
-        elif encoding == "text":
+                raise ValueError(f"Invalid base64 data: {str(e)}")
+        else:  # encoding == "text"
             decoded_data = data.encode("utf-8")
-        else:
-            return {"success": False, "message": f"Unsupported encoding: {encoding}"}
 
         # Save the file
         storage = get_storage_client()
         file_info = storage.save_file(file_name, decoded_data, metadata or {})
 
         return {"success": True, "message": f"File {file_name} uploaded successfully", "file_info": file_info}
-    except Exception as e:
-        logger.error(f"Error uploading file {file_name}: {str(e)}")
-        return {"success": False, "message": f"Error uploading file: {str(e)}"}
+
+    # Execute with standardized error handling
+    return safe_execute(
+        "upload_file",
+        _upload_file,
+        data=data,
+        file_name=file_name,
+        encoding=encoding,
+        metadata=metadata,
+        error_handlers={
+            ValueError: lambda e: {"success": False, "message": str(e)},
+            StorageError: lambda e: {"success": False, "message": f"Storage error: {str(e)}"},
+        },
+    )
 
 
 @register_tool()
@@ -69,14 +88,27 @@ def get_file_info(file_id: str) -> Dict[str, Any]:
     Returns:
         File information including metadata
     """
-    try:
+
+    def _get_file_info(file_id: str) -> Dict[str, Any]:
+        """Implementation function for get_file_info."""
+        if not file_id:
+            raise ValueError("File ID cannot be empty")
+
         storage = get_storage_client()
         file_info = storage.get_file_info(file_id)
 
         return {"success": True, "file_info": file_info}
-    except Exception as e:
-        logger.error(f"Error getting file info for {file_id}: {str(e)}")
-        return {"success": False, "message": f"Error getting file info: {str(e)}"}
+
+    # Execute with standardized error handling
+    return safe_execute(
+        "get_file_info",
+        _get_file_info,
+        file_id=file_id,
+        error_handlers={
+            StorageError: lambda e: {"success": False, "message": f"Error getting file info: {str(e)}"},
+            ValueError: lambda e: {"success": False, "message": str(e)},
+        },
+    )
 
 
 @register_tool()
@@ -94,7 +126,20 @@ def list_files(
     Returns:
         List of files with pagination info
     """
-    try:
+
+    def _list_files(page: int, page_size: int, sort_by: str, sort_desc: bool) -> Dict[str, Any]:
+        """Implementation function for list_files."""
+        # Validate parameters
+        if page < 1:
+            raise ValueError("Page number must be positive")
+
+        if page_size < 1:
+            raise ValueError("Page size must be positive")
+
+        valid_sort_fields = ["uploaded_at", "file_name", "file_size"]
+        if sort_by not in valid_sort_fields:
+            raise ValueError(f"Invalid sort field: {sort_by}. Must be one of {valid_sort_fields}")
+
         storage = get_storage_client()
         result = storage.list_files(page, page_size, sort_by, sort_desc)
 
@@ -105,9 +150,20 @@ def list_files(
             "page": result.get("page", page),
             "page_size": result.get("page_size", page_size),
         }
-    except Exception as e:
-        logger.error(f"Error listing files: {str(e)}")
-        return {"success": False, "message": f"Error listing files: {str(e)}"}
+
+    # Execute with standardized error handling
+    return safe_execute(
+        "list_files",
+        _list_files,
+        page=page,
+        page_size=page_size,
+        sort_by=sort_by,
+        sort_desc=sort_desc,
+        error_handlers={
+            StorageError: lambda e: {"success": False, "message": f"Error listing files: {str(e)}"},
+            ValueError: lambda e: {"success": False, "message": str(e)},
+        },
+    )
 
 
 @register_tool()
@@ -120,14 +176,19 @@ def delete_file(file_id: str) -> Dict[str, Any]:
     Returns:
         Deletion result
     """
-    try:
+
+    def _delete_file(file_id: str) -> Dict[str, Any]:
+        """Implementation function for delete_file."""
+        if not file_id:
+            raise ValueError("File ID cannot be empty")
+
         storage = get_storage_client()
 
         # Get file info first to include in response
         try:
             file_info = storage.get_file_info(file_id)
             file_name = file_info.get("file_name", "Unknown file")
-        except:
+        except Exception:
             file_name = "Unknown file"
 
         # Delete the file
@@ -137,9 +198,17 @@ def delete_file(file_id: str) -> Dict[str, Any]:
             return {"success": True, "message": f"File {file_name} deleted successfully", "file_id": file_id}
         else:
             return {"success": False, "message": f"File {file_id} not found or could not be deleted"}
-    except Exception as e:
-        logger.error(f"Error deleting file {file_id}: {str(e)}")
-        return {"success": False, "message": f"Error deleting file: {str(e)}"}
+
+    # Execute with standardized error handling
+    return safe_execute(
+        "delete_file",
+        _delete_file,
+        file_id=file_id,
+        error_handlers={
+            StorageError: lambda e: {"success": False, "message": f"Error deleting file: {str(e)}"},
+            ValueError: lambda e: {"success": False, "message": str(e)},
+        },
+    )
 
 
 @register_tool()
@@ -165,7 +234,21 @@ def extract_strings(
     Returns:
         Extracted strings and metadata
     """
-    try:
+
+    def _extract_strings(
+        file_id: str, min_length: int, include_unicode: bool, include_ascii: bool, limit: Optional[int]
+    ) -> Dict[str, Any]:
+        """Implementation function for extract_strings."""
+        # Validate parameters
+        if not file_id:
+            raise ValueError("File ID cannot be empty")
+
+        if min_length < 1:
+            raise ValueError("Minimum string length must be positive")
+
+        if not include_unicode and not include_ascii:
+            raise ValueError("At least one string type (Unicode or ASCII) must be included")
+
         storage = get_storage_client()
         result = storage.extract_strings(file_id, min_length, include_unicode, include_ascii, limit)
 
@@ -179,9 +262,21 @@ def extract_strings(
             "include_unicode": result.get("include_unicode", include_unicode),
             "include_ascii": result.get("include_ascii", include_ascii),
         }
-    except Exception as e:
-        logger.error(f"Error extracting strings from file {file_id}: {str(e)}")
-        return {"success": False, "message": f"Error extracting strings: {str(e)}"}
+
+    # Execute with standardized error handling
+    return safe_execute(
+        "extract_strings",
+        _extract_strings,
+        file_id=file_id,
+        min_length=min_length,
+        include_unicode=include_unicode,
+        include_ascii=include_ascii,
+        limit=limit,
+        error_handlers={
+            StorageError: lambda e: {"success": False, "message": f"Error extracting strings: {str(e)}"},
+            ValueError: lambda e: {"success": False, "message": str(e)},
+        },
+    )
 
 
 @register_tool()
@@ -202,7 +297,22 @@ def get_hex_view(
     Returns:
         Hexadecimal representation of file content
     """
-    try:
+
+    def _get_hex_view(file_id: str, offset: int, length: Optional[int], bytes_per_line: int) -> Dict[str, Any]:
+        """Implementation function for get_hex_view."""
+        # Validate parameters
+        if not file_id:
+            raise ValueError("File ID cannot be empty")
+
+        if offset < 0:
+            raise ValueError("Offset must be non-negative")
+
+        if length is not None and length < 1:
+            raise ValueError("Length must be positive")
+
+        if bytes_per_line < 1:
+            raise ValueError("Bytes per line must be positive")
+
         storage = get_storage_client()
         result = storage.get_hex_view(file_id, offset, length, bytes_per_line)
 
@@ -216,9 +326,20 @@ def get_hex_view(
             "total_size": result.get("total_size", 0),
             "bytes_per_line": result.get("bytes_per_line", bytes_per_line),
         }
-    except Exception as e:
-        logger.error(f"Error getting hex view for file {file_id}: {str(e)}")
-        return {"success": False, "message": f"Error getting hex view: {str(e)}"}
+
+    # Execute with standardized error handling
+    return safe_execute(
+        "get_hex_view",
+        _get_hex_view,
+        file_id=file_id,
+        offset=offset,
+        length=length,
+        bytes_per_line=bytes_per_line,
+        error_handlers={
+            StorageError: lambda e: {"success": False, "message": f"Error getting hex view: {str(e)}"},
+            ValueError: lambda e: {"success": False, "message": str(e)},
+        },
+    )
 
 
 @register_tool()
@@ -234,7 +355,16 @@ def download_file(file_id: str, encoding: str = "base64") -> Dict[str, Any]:
     Returns:
         File content and metadata
     """
-    try:
+
+    def _download_file(file_id: str, encoding: str) -> Dict[str, Any]:
+        """Implementation function for download_file."""
+        # Validate parameters
+        if not file_id:
+            raise ValueError("File ID cannot be empty")
+
+        if encoding not in ["base64", "text"]:
+            raise ValueError(f"Unsupported encoding: {encoding}")
+
         storage = get_storage_client()
         file_data = storage.get_file(file_id)
         file_info = storage.get_file_info(file_id)
@@ -250,7 +380,9 @@ def download_file(file_id: str, encoding: str = "base64") -> Dict[str, Any]:
                 encoded_data = base64.b64encode(file_data).decode("ascii")
                 encoding = "base64"  # Update encoding to reflect what was actually used
         else:
-            return {"success": False, "message": f"Unsupported encoding: {encoding}"}
+            # This shouldn't happen due to validation, but just in case
+            encoded_data = base64.b64encode(file_data).decode("ascii")
+            encoding = "base64"
 
         return {
             "success": True,
@@ -261,6 +393,15 @@ def download_file(file_id: str, encoding: str = "base64") -> Dict[str, Any]:
             "data": encoded_data,
             "encoding": encoding,
         }
-    except Exception as e:
-        logger.error(f"Error downloading file {file_id}: {str(e)}")
-        return {"success": False, "message": f"Error downloading file: {str(e)}"}
+
+    # Execute with standardized error handling
+    return safe_execute(
+        "download_file",
+        _download_file,
+        file_id=file_id,
+        encoding=encoding,
+        error_handlers={
+            StorageError: lambda e: {"success": False, "message": f"Error downloading file: {str(e)}"},
+            ValueError: lambda e: {"success": False, "message": str(e)},
+        },
+    )
