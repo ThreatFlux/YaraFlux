@@ -1,12 +1,12 @@
 """Unit tests for the run_mcp module."""
 
-import os
 import logging
-from unittest.mock import patch, MagicMock
+import os
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from yaraflux_mcp_server.run_mcp import setup_environment, main
+from yaraflux_mcp_server.run_mcp import main, setup_environment
 
 
 @pytest.fixture
@@ -48,11 +48,12 @@ def mock_settings():
 @pytest.fixture
 def mock_mcp():
     """Mock mcp object."""
-    with patch.dict("sys.modules", {
-        "yaraflux_mcp_server.mcp_server": MagicMock(),
-        "yaraflux_mcp_server.mcp_server.mcp": MagicMock()
-    }):
+    with patch.dict(
+        "sys.modules",
+        {"yaraflux_mcp_server.mcp_server": MagicMock(), "yaraflux_mcp_server.mcp_server.mcp": MagicMock()},
+    ):
         import sys
+
         mocked_mcp = sys.modules["yaraflux_mcp_server.mcp_server"].mcp
         yield mocked_mcp
 
@@ -63,7 +64,7 @@ class TestSetupEnvironment:
     def test_directories_creation(self, mock_makedirs, mock_init_user_db, mock_yara_service, mock_settings):
         """Test that all required directories are created."""
         setup_environment()
-        
+
         # Verify directories are created
         assert mock_makedirs.call_count == 6
         mock_makedirs.assert_any_call(mock_settings.STORAGE_DIR, exist_ok=True)
@@ -85,19 +86,21 @@ class TestSetupEnvironment:
             include_default_rules=mock_settings.YARA_INCLUDE_DEFAULT_RULES
         )
 
-    def test_user_db_initialization_error(self, mock_makedirs, mock_init_user_db, mock_yara_service, mock_settings, caplog):
+    def test_user_db_initialization_error(
+        self, mock_makedirs, mock_init_user_db, mock_yara_service, mock_settings, caplog
+    ):
         """Test error handling for user database initialization."""
         # Simulate an error during database initialization
         mock_init_user_db.side_effect = Exception("Database initialization error")
-        
+
         # Run with captured logs
         with caplog.at_level(logging.ERROR):
             setup_environment()
-            
+
         # Verify the error was logged
         assert "Error initializing user database" in caplog.text
         assert "Database initialization error" in caplog.text
-        
+
         # Verify YARA rules were still loaded despite the error
         mock_yara_service.load_rules.assert_called_once()
 
@@ -105,11 +108,11 @@ class TestSetupEnvironment:
         """Test error handling for YARA rules loading."""
         # Simulate an error during rule loading
         mock_yara_service.load_rules.side_effect = Exception("Rule loading error")
-        
+
         # Run with captured logs
         with caplog.at_level(logging.ERROR):
             setup_environment()
-            
+
         # Verify the error was logged
         assert "Error loading YARA rules" in caplog.text
         assert "Rule loading error" in caplog.text
@@ -123,13 +126,13 @@ class TestMain:
         """Test the main function."""
         with caplog.at_level(logging.INFO):
             main()
-            
+
         # Verify environment setup was called
         mock_setup_env.assert_called_once()
-        
+
         # Verify MCP server was run
         mock_mcp.run.assert_called_once()
-        
+
         # Verify log messages
         assert "Starting YaraFlux MCP Server" in caplog.text
         assert "Running MCP server..." in caplog.text
@@ -142,6 +145,6 @@ class TestMain:
             # This will raise ImportError when trying to import from yaraflux_mcp_server.mcp_server
             with pytest.raises(ImportError):
                 main()
-            
+
         # Verify environment setup was still called
         mock_setup_env.assert_called_once()

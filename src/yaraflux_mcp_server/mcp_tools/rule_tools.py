@@ -93,7 +93,7 @@ def get_yara_rule(rule_name: str, source: str = "custom") -> Dict[str, Any]:
                 "source": source,
                 "content": content,
                 "metadata": metadata.dict() if metadata else {},
-            }
+            },
         }
     except YaraError as e:
         logger.error(f"YARA error in get_yara_rule: {str(e)}")
@@ -312,6 +312,16 @@ def import_threatflux_rules(url: Optional[str] = None, branch: str = "master") -
         import_count = 0
         error_count = 0
 
+        # Check for connection errors immediately
+        try:
+            # Test connection by attempting to access the URL
+            test_response = httpx.get(url.replace("github.com", "raw.githubusercontent.com"), timeout=10)
+            if test_response.status_code >= 400:
+                raise Exception(f"HTTP error: {test_response.status_code}")
+        except Exception as e:
+            logger.error(f"Connection error: {str(e)}")
+            return {"success": False, "message": f"Connection error: {str(e)}", "error": str(e)}
+
         # Create a temporary directory for downloading the repo
         with tempfile.TemporaryDirectory() as temp_dir:
             # Set up paths
@@ -425,4 +435,8 @@ def import_threatflux_rules(url: Optional[str] = None, branch: str = "master") -
         return {"success": False, "message": str(e)}
     except Exception as e:
         logger.error(f"Unexpected error in import_threatflux_rules: {str(e)}")
-        return {"success": False, "message": f"Error importing rules: {str(e)}"}
+        return {
+            "success": False,
+            "message": f"Error importing rules: {str(e)}",
+            "error": str(e),  # Include the original error message
+        }

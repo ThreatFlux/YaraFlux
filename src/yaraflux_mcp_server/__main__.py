@@ -5,6 +5,7 @@ python -m yaraflux_mcp_server
 """
 
 import logging
+
 import click
 import uvicorn
 

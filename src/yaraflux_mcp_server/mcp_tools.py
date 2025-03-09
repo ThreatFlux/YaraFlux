@@ -17,7 +17,6 @@ from uuid import UUID
 import httpx
 from pydantic import HttpUrl
 
-
 from yaraflux_mcp_server.storage import get_storage_client
 from yaraflux_mcp_server.yara_service import YaraError, yara_service
 

@@ -14,11 +14,13 @@ from yaraflux_mcp_server.yara_service import YaraError
 logger = logging.getLogger(__name__)
 
 # Type definitions
-T = TypeVar('T')
-E = TypeVar('E', bound=Exception)
+T = TypeVar("T")
+E = TypeVar("E", bound=Exception)
+
 
 class ErrorHandler(Protocol):
     """Protocol for error handler functions."""
+
     def __call__(self, error: Exception) -> Dict[str, Any]: ...
 
 
@@ -40,7 +42,7 @@ def format_error_message(error: Exception) -> str:
         return f"File not found: {str(error)}"
     if isinstance(error, PermissionError):
         return f"Permission denied: {str(error)}"
-    
+
     # Generic error message for other exceptions
     return f"Error: {str(error)}"
 
@@ -79,10 +81,10 @@ def handle_tool_error(
 
 
 def safe_execute(
-    func_name: str, 
-    operation: Callable[..., T], 
-    error_handlers: Optional[Dict[Type[Exception], Callable[[Exception], Dict[str, Any]]]] = None, 
-    **kwargs: Any
+    func_name: str,
+    operation: Callable[..., T],
+    error_handlers: Optional[Dict[Type[Exception], Callable[[Exception], Dict[str, Any]]]] = None,
+    **kwargs: Any,
 ) -> Dict[str, Any]:
     """Safely execute an operation with standardized error handling.
 

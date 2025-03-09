@@ -6,7 +6,7 @@ securing FastAPI routes.
 """
 
 import logging
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from typing import Dict, List, Optional, Union
 
 from fastapi import Depends, HTTPException, status
@@ -48,6 +48,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_PREFIX}/auth/token
 # Mock user database - in a real application, replace with a database
 _user_db: Dict[str, UserInDB] = {}
 
+
 def init_user_db() -> None:
     """Initialize the user database with the admin user."""
     # Admin user is always created
@@ -55,17 +56,21 @@ def init_user_db() -> None:
         create_user(username=settings.ADMIN_USERNAME, password=settings.ADMIN_PASSWORD, role=UserRole.ADMIN)
         logger.info(f"Created admin user: {settings.ADMIN_USERNAME}")
 
+
 def get_password_hash(password: str) -> str:
     """Generate a hashed password."""
     return pwd_context.hash(password)
+
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against a hash."""
     return pwd_context.verify(plain_password, hashed_password)
 
+
 def get_user(username: str) -> Optional[UserInDB]:
     """Get a user from the database by username."""
     return _user_db.get(username)
+
 
 def create_user(username: str, password: str, role: UserRole = UserRole.USER, email: Optional[str] = None) -> User:
     """Create a new user."""
@@ -76,7 +81,8 @@ def create_user(username: str, password: str, role: UserRole = UserRole.USER, em
     user = UserInDB(username=username, hashed_password=hashed_password, role=role, email=email)
     _user_db[username] = user
     logger.info(f"Created user: {username} with role {role}")
-    return User(**user.model_dump(exclude={'hashed_password'}))
+    return User(**user.model_dump(exclude={"hashed_password"}))
+
 
 def authenticate_user(username: str, password: str) -> Optional[UserInDB]:
     """Authenticate a user with username and password."""
@@ -90,60 +96,59 @@ def authenticate_user(username: str, password: str) -> Optional[UserInDB]:
     if user.disabled:
         logger.warning(f"Authentication failed: User is disabled: {username}")
         return None
-    
+
     user.last_login = datetime.now(UTC)
     return user
 
+
 def create_token_data(username: str, role: UserRole, expire_time: datetime) -> Dict[str, Union[str, datetime]]:
     """Create base token data."""
-    return {
-        "sub": username,
-        "role": role,
-        "exp": expire_time,
-        "iat": datetime.now(UTC)
-    }
+    return {"sub": username, "role": role, "exp": expire_time, "iat": datetime.now(UTC)}
 
-def create_access_token(data: Dict[str, Union[str, datetime, UserRole]], expires_delta: Optional[timedelta] = None) -> str:
+
+def create_access_token(
+    data: Dict[str, Union[str, datetime, UserRole]], expires_delta: Optional[timedelta] = None
+) -> str:
     """Create a JWT access token."""
     expire = datetime.now(UTC) + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     username = str(data.get("sub"))
     role = data.get("role", UserRole.USER)
-    
+
     token_data = create_token_data(username, role, expire)
     return jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
 
-def create_refresh_token(data: Dict[str, Union[str, datetime, UserRole]], expires_delta: Optional[timedelta] = None) -> str:
+
+def create_refresh_token(
+    data: Dict[str, Union[str, datetime, UserRole]], expires_delta: Optional[timedelta] = None
+) -> str:
     """Create a JWT refresh token."""
     expire = datetime.now(UTC) + (expires_delta or timedelta(minutes=REFRESH_TOKEN_EXPIRE_MINUTES))
     username = str(data.get("sub"))
     role = data.get("role", UserRole.USER)
-    
+
     token_data = create_token_data(username, role, expire)
     token_data["refresh"] = True
-    
+
     return jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
+
 
 def decode_token(token: str) -> TokenData:
     """Decode and validate a JWT token."""
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        
+
         username = payload.get("sub")
         if not username:
             raise JWTError("Missing username claim")
-            
+
         role = payload.get("role", UserRole.USER)
         exp = payload.get("exp")
-        
+
         if exp and datetime.fromtimestamp(exp, UTC) < datetime.now(UTC):
             raise JWTError("Token has expired")
-            
-        return TokenData(
-            username=username,
-            role=role,
-            exp=datetime.fromtimestamp(exp, UTC) if exp else None
-        )
-        
+
+        return TokenData(username=username, role=role, exp=datetime.fromtimestamp(exp, UTC) if exp else None)
+
     except JWTError as e:
         logger.warning(f"Token validation error: {str(e)}")
         # Use the error message from the JWTError
@@ -153,26 +158,27 @@ def decode_token(token: str) -> TokenData:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+
 def refresh_access_token(refresh_token: str, storage: Optional[StorageClient] = None) -> str:
     """Create a new access token using a refresh token."""
     try:
         payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
-        
+
         if not payload.get("refresh"):
             logger.warning("Attempt to use non-refresh token for refresh")
             raise JWTError("Invalid refresh token")
-            
+
         username = payload.get("sub")
         role = payload.get("role", UserRole.USER)
-        
+
         if not username:
             logger.warning("Refresh token missing username claim")
             raise JWTError("Invalid token data")
-        
+
         # Create new access token with same role
         access_token_data = {"sub": username, "role": role}
         return create_access_token(access_token_data)
-        
+
     except JWTError as e:
         logger.warning(f"Refresh token validation error: {str(e)}")
         raise HTTPException(
@@ -181,10 +187,11 @@ def refresh_access_token(refresh_token: str, storage: Optional[StorageClient] = 
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
     """Get the current user from a JWT token."""
     token_data = decode_token(token)
-    
+
     user = get_user(token_data.username)
     if not user:
         logger.warning(f"User from token not found: {token_data.username}")
@@ -193,34 +200,28 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
             detail="User not found",
             headers={"WWW-Authenticate": "Bearer"},
         )
-        
+
     if user.disabled:
         logger.warning(f"User from token is disabled: {token_data.username}")
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User is disabled"
-        )
-    
-    return User(**user.model_dump(exclude={'hashed_password'}))
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is disabled")
+
+    return User(**user.model_dump(exclude={"hashed_password"}))
+
 
 async def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
     """Get the current active user."""
     if current_user.disabled:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Inactive user"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user")
     return current_user
+
 
 async def validate_admin(current_user: User = Depends(get_current_active_user)) -> User:
     """Validate that the current user is an admin."""
     if current_user.role != UserRole.ADMIN:
         logger.warning(f"Admin access denied for user: {current_user.username}")
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin privileges required"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required")
     return current_user
+
 
 def delete_user(username: str, current_username: str) -> bool:
     """Delete a user from the database."""
@@ -240,12 +241,11 @@ def delete_user(username: str, current_username: str) -> bool:
     logger.info(f"Deleted user: {username}")
     return True
 
+
 def list_users() -> List[User]:
     """List all users in the database."""
-    return [
-        User(**user.model_dump(exclude={'hashed_password'}))
-        for user in _user_db.values()
-    ]
+    return [User(**user.model_dump(exclude={"hashed_password"})) for user in _user_db.values()]
+
 
 def update_user(
     username: str,
@@ -275,4 +275,4 @@ def update_user(
         user.hashed_password = get_password_hash(password)
 
     logger.info(f"Updated user: {username}")
-    return User(**user.model_dump(exclude={'hashed_password'}))
+    return User(**user.model_dump(exclude={"hashed_password"}))

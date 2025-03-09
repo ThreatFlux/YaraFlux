@@ -1,361 +1,480 @@
-"""Tests for rule tools."""
+"""Fixed tests for rule tools to improve coverage."""
+
 import json
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
-from unittest.mock import Mock, patch, MagicMock
-from datetime import datetime, UTC
+from fastapi import HTTPException
 
 from yaraflux_mcp_server.mcp_tools.rule_tools import (
-    list_yara_rules,
-    get_yara_rule,
-    validate_yara_rule, 
     add_yara_rule,
-    update_yara_rule,
     delete_yara_rule,
-    import_threatflux_rules
+    get_yara_rule,
+    import_threatflux_rules,
+    list_yara_rules,
+    update_yara_rule,
+    validate_yara_rule,
 )
-from yaraflux_mcp_server.yara_service import YaraRuleMetadata
+from yaraflux_mcp_server.yara_service import YaraError
 
-# Need to patch the yara_service instance
-@patch('yaraflux_mcp_server.mcp_tools.rule_tools.yara_service')
-def test_list_yara_rules(mock_yara_service):
-    """Test list_yara_rules tool."""
-    # Setup list_rules
-    rule1 = YaraRuleMetadata(
-        name="test_rule1",
-        source="custom",
-        created=datetime.now(UTC),
-        is_compiled=True
-    )
-    rule2 = YaraRuleMetadata(
-        name="test_rule2",
-        source="community",
-        created=datetime.now(UTC),
-        is_compiled=True
-    )
+
+@patch("yaraflux_mcp_server.mcp_tools.rule_tools.yara_service")
+def test_list_yara_rules_success(mock_yara_service):
+    """Test list_yara_rules successfully returns rules."""
+    # Setup mocks
+    rule1 = Mock()
+    rule1.dict.return_value = {"name": "rule1.yar", "source": "custom"}
+    rule2 = Mock()
+    rule2.dict.return_value = {"name": "rule2.yar", "source": "community"}
     mock_yara_service.list_rules.return_value = [rule1, rule2]
+
+    # Call the function (without filters)
+    result = list_yara_rules()
+
+    # Verify results
+    assert len(result) == 2
+    assert {"name": "rule1.yar", "source": "custom"} in result
+    assert {"name": "rule2.yar", "source": "community"} in result
+
+    # Verify mocks were called correctly
+    mock_yara_service.list_rules.assert_called_once_with(None)
+
+
+@patch("yaraflux_mcp_server.mcp_tools.rule_tools.yara_service")
+def test_list_yara_rules_filtered(mock_yara_service):
+    """Test list_yara_rules with source filtering."""
+    # Setup mocks
+    rule1 = Mock()
+    rule1.dict.return_value = {"name": "rule1.yar", "source": "custom"}
+    rule2 = Mock()
+    rule2.dict.return_value = {"name": "rule2.yar", "source": "custom"}
+    mock_yara_service.list_rules.return_value = [rule1, rule2]
+
+    # Call the function with source filter
+    result = list_yara_rules("custom")
+
+    # Verify results
+    assert len(result) == 2
+
+    # Verify mocks were called correctly
+    mock_yara_service.list_rules.assert_called_once_with("custom")
+
+
+@patch("yaraflux_mcp_server.mcp_tools.rule_tools.yara_service")
+def test_list_yara_rules_all_source(mock_yara_service):
+    """Test list_yara_rules with 'all' source."""
+    # Setup mocks
+    rule1 = Mock()
+    rule1.dict.return_value = {"name": "rule1.yar", "source": "custom"}
+    rule2 = Mock()
+    rule2.dict.return_value = {"name": "rule2.yar", "source": "community"}
+    mock_yara_service.list_rules.return_value = [rule1, rule2]
+
+    # Call the function with 'all' source
+    result = list_yara_rules("all")
+
+    # Verify results
+    assert len(result) == 2
+
+    # Verify mocks were called correctly
+    mock_yara_service.list_rules.assert_called_once_with(None)
+
+
+@patch("yaraflux_mcp_server.mcp_tools.rule_tools.yara_service")
+def test_list_yara_rules_error(mock_yara_service):
+    """Test list_yara_rules with an error."""
+    # Setup mock to raise an exception
+    mock_yara_service.list_rules.side_effect = Exception("Test error")
 
     # Call the function
     result = list_yara_rules()
-    
-    # Verify the result
-    assert isinstance(result, list)
-    assert len(result) == 2
-    
-    # Verify the mock was called correctly
-    mock_yara_service.list_rules.assert_called_with(None)
+
+    # Verify results
+    assert result == []
 
 
-@patch('yaraflux_mcp_server.mcp_tools.rule_tools.yara_service')
-def test_list_yara_rules_with_source_filter(mock_yara_service):
-    """Test list_yara_rules tool with source filter."""
-    # Call the function with source filter
-    list_yara_rules(source="custom")
-    
-    # Verify the mock was called correctly
-    mock_yara_service.list_rules.assert_called_with("custom")
+@patch("yaraflux_mcp_server.mcp_tools.rule_tools.yara_service")
+def test_get_yara_rule_success(mock_yara_service):
+    """Test get_yara_rule successfully retrieves a rule."""
+    # Setup mocks
+    mock_yara_service.get_rule.return_value = "rule test { condition: true }"
+    rule = Mock()
+    rule.name = "test.yar"
+    rule.dict.return_value = {"name": "test.yar", "source": "custom"}
+    mock_yara_service.list_rules.return_value = [rule]
 
-
-@patch('yaraflux_mcp_server.mcp_tools.rule_tools.yara_service')
-def test_get_yara_rule(mock_yara_service):
-    """Test get_yara_rule tool."""
-    # Setup get_rule
-    mock_yara_service.get_rule.return_value = """
-    rule test_rule1 {
-        meta:
-            author = "Test Author"
-        strings:
-            $a = "test string"
-        condition:
-            $a
-    }
-    """
-
-    # Setup list_rules to get metadata
-    rule1 = YaraRuleMetadata(
-        name="test_rule1",
-        source="custom",
-        created=datetime.now(UTC),
-        is_compiled=True
-    )
-    rule2 = YaraRuleMetadata(
-        name="test_rule2",
-        source="community",
-        created=datetime.now(UTC),
-        is_compiled=True
-    )
-    mock_yara_service.list_rules.return_value = [rule1, rule2]
-    
     # Call the function
-    result = get_yara_rule(
-        rule_name="test_rule1",
-        source="custom"
-    )
-    
-    # Verify the result
-    assert isinstance(result, dict)
-    assert "success" in result
+    result = get_yara_rule(rule_name="test.yar", source="custom")
+
+    # Verify results
     assert result["success"] is True
-    assert "result" in result
-    assert result["result"]["name"] == "test_rule1"
-    
-    # Verify the mock was called with the correct arguments
-    # In the actual implementation, source is passed as positional, not keyword argument
-    mock_yara_service.get_rule.assert_called_with("test_rule1", "custom")
+    assert result["result"]["name"] == "test.yar"
+    assert result["result"]["source"] == "custom"
+    assert result["result"]["content"] == "rule test { condition: true }"
+    assert result["result"]["metadata"] == {"name": "test.yar", "source": "custom"}
+
+    # Verify mocks were called correctly
+    mock_yara_service.get_rule.assert_called_once_with("test.yar", "custom")
+    mock_yara_service.list_rules.assert_called_once_with("custom")
 
 
-@patch('yaraflux_mcp_server.mcp_tools.rule_tools.yara_service')
-def test_get_yara_rule_not_found(mock_yara_service):
-    """Test get_yara_rule tool with rule that doesn't exist."""
-    # Set up the mock to raise exception
-    mock_yara_service.get_rule.side_effect = Exception("Rule not found")
-    mock_yara_service.list_rules.return_value = []
-    
-    # Call the function
-    result = get_yara_rule(
-        rule_name="nonexistent_rule",
-        source="custom"
-    )
-    
-    # Verify result has error
-    assert "success" in result
+@patch("yaraflux_mcp_server.mcp_tools.rule_tools.yara_service")
+def test_get_yara_rule_invalid_source(mock_yara_service):
+    """Test get_yara_rule with invalid source."""
+    # Call the function with invalid source
+    result = get_yara_rule(rule_name="test.yar", source="invalid")
+
+    # Verify results
     assert result["success"] is False
-    assert "message" in result
+    assert "Invalid source" in result["message"]
+
+    # Verify mock was not called
+    mock_yara_service.get_rule.assert_not_called()
 
 
-# Using patch as context manager since yara is imported inside the function
-def test_validate_yara_rule_valid():
-    """Test validate_yara_rule tool with valid rule."""
-    # Valid YARA rule
-    rule_content = 'rule test_rule { meta: author = "Test Author" strings: $a = "test string" condition: $a }'
-    
-    # Patch the yara module
-    with patch('yara.compile') as mock_compile:
-        # Setup mock yara to not raise exception
-        mock_compile.return_value = Mock()
-        
-        # Call the function
-        result = validate_yara_rule(content=rule_content)
-    
-    # Verify the result
-    assert isinstance(result, dict)
+@patch("yaraflux_mcp_server.mcp_tools.rule_tools.yara_service")
+def test_get_yara_rule_no_metadata(mock_yara_service):
+    """Test get_yara_rule with no matching metadata."""
+    # Setup mocks
+    mock_yara_service.get_rule.return_value = "rule test { condition: true }"
+    rule = Mock()
+    rule.name = "other_rule.yar"
+    rule.dict.return_value = {"name": "other_rule.yar", "source": "custom"}
+    mock_yara_service.list_rules.return_value = [rule]  # Different rule name
+
+    # Call the function
+    result = get_yara_rule(rule_name="test.yar", source="custom")
+
+    # Verify results
+    assert result["success"] is True
+    assert result["result"]["name"] == "test.yar"
+    assert result["result"]["metadata"] == {}  # No metadata found
+
+    # Verify mocks were called correctly
+    mock_yara_service.get_rule.assert_called_once_with("test.yar", "custom")
+
+
+@patch("yaraflux_mcp_server.mcp_tools.rule_tools.yara_service")
+def test_get_yara_rule_error(mock_yara_service):
+    """Test get_yara_rule with error."""
+    # Setup mock to raise an exception
+    mock_yara_service.get_rule.side_effect = YaraError("Rule not found")
+
+    # Call the function
+    result = get_yara_rule(rule_name="test.yar", source="custom")
+
+    # Verify results
+    assert result["success"] is False
+    assert "Rule not found" in result["message"]
+    assert result["name"] == "test.yar"
+    assert result["source"] == "custom"
+
+
+@patch("builtins.__import__")
+def test_validate_yara_rule_valid(mock_import):
+    """Test validate_yara_rule with valid rule."""
+    # Setup mock for the yara import
+    mock_yara_module = Mock()
+    mock_import.return_value = mock_yara_module
+
+    # Call the function
+    result = validate_yara_rule(content="rule test { condition: true }")
+
+    # Verify results
     assert "valid" in result
     assert result["valid"] is True
+    assert result["message"] == "Rule is valid"
 
 
-def test_validate_yara_rule_invalid():
-    """Test validate_yara_rule tool with invalid rule."""
-    # Invalid YARA rule
-    rule_content = 'rule test_rule { strings: $a = "test string"'  # Missing closing brace and condition
-    
-    # Patch the yara module
-    with patch('yara.compile') as mock_compile:
-        # Setup mock yara to raise exception
-        mock_compile.side_effect = Exception("syntax error, unexpected end of file")
-        
-        # Call the function
-        result = validate_yara_rule(content=rule_content)
-    
-    # Verify the result
-    assert isinstance(result, dict)
+@patch("builtins.__import__")
+def test_validate_yara_rule_invalid(mock_import):
+    """Test validate_yara_rule with invalid rule."""
+    # Setup mocks for the yara import to raise an exception
+    mock_yara_module = Mock()
+    mock_yara_module.compile.side_effect = Exception('line 1: undefined identifier "invalid"')
+    mock_import.return_value = mock_yara_module
+
+    # Call the function
+    result = validate_yara_rule(content="rule test { condition: invalid }")
+
+    # Verify results
     assert "valid" in result
     assert result["valid"] is False
-    assert "message" in result
+    assert "undefined identifier" in result["message"]
+    assert result["error_type"] == "YaraError"
 
 
-@patch('yaraflux_mcp_server.mcp_tools.rule_tools.yara_service')
-def test_add_yara_rule(mock_yara_service):
-    """Test add_yara_rule tool."""
-    # Setup add_rule
-    mock_yara_service.add_rule.return_value = YaraRuleMetadata(
-        name="new_rule.yar",
-        source="custom",
-        created=datetime.now(UTC),
-        is_compiled=True
-    )
-    
+@patch("yaraflux_mcp_server.mcp_tools.rule_tools.yara_service")
+def test_add_yara_rule_success(mock_yara_service):
+    """Test add_yara_rule successfully adds a rule."""
+    # Setup mock
+    metadata = Mock()
+    metadata.dict.return_value = {"name": "test.yar", "source": "custom"}
+    mock_yara_service.add_rule.return_value = metadata
+
     # Call the function
-    result = add_yara_rule(
-        name="new_rule",
-        content='rule new_rule { meta: author = "Test Author" strings: $a = "test string" condition: $a }',
-        source="custom"
-    )
-    
-    # Verify the result
-    assert isinstance(result, dict)
-    assert "success" in result
+    result = add_yara_rule(name="test.yar", content="rule test { condition: true }", source="custom")
+
+    # Verify results
     assert result["success"] is True
-    assert "metadata" in result
-    
-    # Verify the mock was called with the correct arguments
-    # In the actual implementation, source is passed as positional, not keyword argument
-    mock_yara_service.add_rule.assert_called_once_with(
-        "new_rule.yar",
-        'rule new_rule { meta: author = "Test Author" strings: $a = "test string" condition: $a }',
-        "custom"
-    )
+    assert "added successfully" in result["message"]
+    assert result["metadata"] == {"name": "test.yar", "source": "custom"}
+
+    # Verify mock was called correctly
+    mock_yara_service.add_rule.assert_called_once_with("test.yar", "rule test { condition: true }", "custom")
 
 
-@patch('yaraflux_mcp_server.mcp_tools.rule_tools.yara_service')
+@patch("yaraflux_mcp_server.mcp_tools.rule_tools.yara_service")
+def test_add_yara_rule_adds_extension(mock_yara_service):
+    """Test add_yara_rule adds .yar extension if missing."""
+    # Setup mock
+    metadata = Mock()
+    metadata.dict.return_value = {"name": "test.yar", "source": "custom"}
+    mock_yara_service.add_rule.return_value = metadata
+
+    # Call the function without .yar extension
+    result = add_yara_rule(name="test", content="rule test { condition: true }", source="custom")  # No .yar extension
+
+    # Verify results
+    assert result["success"] is True
+
+    # Verify mock was called with .yar extension
+    mock_yara_service.add_rule.assert_called_once_with("test.yar", "rule test { condition: true }", "custom")
+
+
+@patch("yaraflux_mcp_server.mcp_tools.rule_tools.yara_service")
+def test_add_yara_rule_invalid_source(mock_yara_service):
+    """Test add_yara_rule with invalid source."""
+    # Call the function with invalid source
+    result = add_yara_rule(name="test.yar", content="rule test { condition: true }", source="invalid")
+
+    # Verify results
+    assert result["success"] is False
+    assert "Invalid source" in result["message"]
+
+    # Verify mock was not called
+    mock_yara_service.add_rule.assert_not_called()
+
+
+@patch("yaraflux_mcp_server.mcp_tools.rule_tools.yara_service")
+def test_add_yara_rule_empty_content(mock_yara_service):
+    """Test add_yara_rule with empty content."""
+    # Call the function with empty content
+    result = add_yara_rule(name="test.yar", content="   ", source="custom")  # Empty after strip
+
+    # Verify results
+    assert result["success"] is False
+    assert "content cannot be empty" in result["message"]
+
+    # Verify mock was not called
+    mock_yara_service.add_rule.assert_not_called()
+
+
+@patch("yaraflux_mcp_server.mcp_tools.rule_tools.yara_service")
 def test_add_yara_rule_error(mock_yara_service):
-    """Test add_yara_rule tool with error."""
-    # Set up the mock to raise an exception
-    mock_yara_service.add_rule.side_effect = Exception("Failed to compile rule")
-    
+    """Test add_yara_rule with error."""
+    # Setup mock to raise an exception
+    mock_yara_service.add_rule.side_effect = YaraError("Compilation error")
+
     # Call the function
-    result = add_yara_rule(
-        name="bad_rule",
-        content='rule bad_rule { strings: $a = "test" condition: $b }',  # $b is not defined
-        source="custom"
-    )
-    
-    # Verify result has error
-    assert "success" in result
+    result = add_yara_rule(name="test.yar", content="rule test { condition: true }", source="custom")
+
+    # Verify results
     assert result["success"] is False
-    assert "message" in result
-    assert "Failed to compile rule" in result["message"]
+    assert "Compilation error" in result["message"]
 
 
-@patch('yaraflux_mcp_server.mcp_tools.rule_tools.yara_service')
-def test_update_yara_rule(mock_yara_service):
-    """Test update_yara_rule tool."""
-    # Setup update_rule
-    mock_yara_service.get_rule.return_value = "original rule content"
-    mock_yara_service.update_rule.return_value = YaraRuleMetadata(
-        name="updated_rule",
-        source="custom",
-        created=datetime.now(UTC),
-        modified=datetime.now(UTC),
-        is_compiled=True
-    )
-    
+@patch("yaraflux_mcp_server.mcp_tools.rule_tools.yara_service")
+def test_update_yara_rule_success(mock_yara_service):
+    """Test update_yara_rule successfully updates a rule."""
+    # Setup mocks
+    metadata = Mock()
+    metadata.dict.return_value = {"name": "test.yar", "source": "custom"}
+    mock_yara_service.update_rule.return_value = metadata
+
     # Call the function
-    result = update_yara_rule(
-        name="updated_rule",
-        content='rule updated_rule { meta: author = "Updated Author" strings: $a = "updated string" condition: $a }',
-        source="custom"
-    )
-    
-    # Verify the result
-    assert isinstance(result, dict)
-    assert "success" in result
+    result = update_yara_rule(name="test.yar", content="rule test { condition: true }", source="custom")
+
+    # Verify results
     assert result["success"] is True
-    assert "metadata" in result
-    
-    # Verify the mock was called with the correct arguments
-    # In the actual implementation, source is passed as positional, not keyword argument
-    mock_yara_service.update_rule.assert_called_with(
-        "updated_rule",
-        'rule updated_rule { meta: author = "Updated Author" strings: $a = "updated string" condition: $a }',
-        "custom"
-    )
+    assert "updated successfully" in result["message"]
+    assert result["metadata"] == {"name": "test.yar", "source": "custom"}
+
+    # Verify mocks were called correctly
+    mock_yara_service.get_rule.assert_called_once_with("test.yar", "custom")
+    mock_yara_service.update_rule.assert_called_once_with("test.yar", "rule test { condition: true }", "custom")
 
 
-@patch('yaraflux_mcp_server.mcp_tools.rule_tools.yara_service')
-def test_delete_yara_rule(mock_yara_service):
-    """Test delete_yara_rule tool."""
-    # Setup delete_rule
-    mock_yara_service.delete_rule.return_value = True
-    
+@patch("yaraflux_mcp_server.mcp_tools.rule_tools.yara_service")
+def test_update_yara_rule_not_found(mock_yara_service):
+    """Test update_yara_rule with rule not found."""
+    # Setup mock to raise an exception
+    mock_yara_service.get_rule.side_effect = YaraError("Rule not found")
+
     # Call the function
-    result = delete_yara_rule(
-        name="rule_to_delete",
-        source="custom"
-    )
-    
-    # Verify the result
-    assert isinstance(result, dict)
-    assert "success" in result
-    assert result["success"] is True
-    
-    # Verify the mock was called with the correct arguments
-    # In the actual implementation, source is passed as positional, not keyword argument
-    mock_yara_service.delete_rule.assert_called_with("rule_to_delete", "custom")
+    result = update_yara_rule(name="test.yar", content="rule test { condition: true }", source="custom")
 
-
-@patch('yaraflux_mcp_server.mcp_tools.rule_tools.yara_service')
-def test_delete_yara_rule_error(mock_yara_service):
-    """Test delete_yara_rule tool with error."""
-    # Set up the mock to raise an exception
-    mock_yara_service.delete_rule.side_effect = Exception("Rule not found")
-    
-    # Call the function
-    result = delete_yara_rule(
-        name="nonexistent_rule",
-        source="custom"
-    )
-    
-    # Verify result has error
-    assert "success" in result
+    # Verify results
     assert result["success"] is False
-    assert "message" in result
     assert "Rule not found" in result["message"]
 
+    # Verify only get_rule was called, not update_rule
+    mock_yara_service.get_rule.assert_called_once_with("test.yar", "custom")
+    mock_yara_service.update_rule.assert_not_called()
 
-@patch('yaraflux_mcp_server.mcp_tools.rule_tools.yara_service')
-@patch('yaraflux_mcp_server.mcp_tools.rule_tools.httpx')
-def test_import_threatflux_rules(mock_httpx, mock_yara_service):
-    """Test import_threatflux_rules tool."""
-    # Setup httpx and yara_service
-    mock_response = Mock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {"rules": ["rule1.yar", "rule2.yar", "rule3.yar"]}
-    mock_response.text = "rule content"
-    mock_httpx.get.return_value = mock_response
-    
-    mock_yara_service.add_rule.return_value = None
-    mock_yara_service.load_rules.return_value = None
-    
-    # Call the function with default repo
-    result = import_threatflux_rules()
-    
-    # Verify the result
-    assert isinstance(result, dict)
-    assert "success" in result
+
+@patch("yaraflux_mcp_server.mcp_tools.rule_tools.yara_service")
+def test_delete_yara_rule_success(mock_yara_service):
+    """Test delete_yara_rule successfully deletes a rule."""
+    # Setup mock
+    mock_yara_service.delete_rule.return_value = True
+
+    # Call the function
+    result = delete_yara_rule(name="test.yar", source="custom")
+
+    # Verify results
     assert result["success"] is True
-    assert "import_count" in result
-    assert result["import_count"] > 0
+    assert "deleted successfully" in result["message"]
+
+    # Verify mock was called correctly
+    mock_yara_service.delete_rule.assert_called_once_with("test.yar", "custom")
 
 
-@patch('yaraflux_mcp_server.mcp_tools.rule_tools.yara_service')
-@patch('yaraflux_mcp_server.mcp_tools.rule_tools.httpx')
-def test_import_threatflux_rules_custom_repo(mock_httpx, mock_yara_service):
-    """Test import_threatflux_rules tool with custom repo."""
-    # Setup httpx and yara_service
-    mock_response = Mock()
+@patch("yaraflux_mcp_server.mcp_tools.rule_tools.yara_service")
+def test_delete_yara_rule_not_found(mock_yara_service):
+    """Test delete_yara_rule with rule not found."""
+    # Setup mock
+    mock_yara_service.delete_rule.return_value = False
+
+    # Call the function
+    result = delete_yara_rule(name="test.yar", source="custom")
+
+    # Verify results
+    assert result["success"] is False
+    assert "not found" in result["message"]
+
+    # Verify mock was called correctly
+    mock_yara_service.delete_rule.assert_called_once_with("test.yar", "custom")
+
+
+@patch("yaraflux_mcp_server.mcp_tools.rule_tools.yara_service")
+def test_delete_yara_rule_error(mock_yara_service):
+    """Test delete_yara_rule with error."""
+    # Setup mock to raise an exception
+    mock_yara_service.delete_rule.side_effect = YaraError("Permission denied")
+
+    # Call the function
+    result = delete_yara_rule(name="test.yar", source="custom")
+
+    # Verify results
+    assert result["success"] is False
+    assert "Permission denied" in result["message"]
+
+
+@patch("yaraflux_mcp_server.mcp_tools.rule_tools.httpx")
+@patch("yaraflux_mcp_server.mcp_tools.rule_tools.yara_service")
+def test_import_threatflux_rules_success(mock_yara_service, mock_httpx):
+    """Test import_threatflux_rules successfully imports rules."""
+    # Setup mock test response
+    mock_test_response = MagicMock()
+    mock_test_response.status_code = 200
+
+    # Setup mock index response
+    mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.json.return_value = {"rules": ["rule1.yar", "rule2.yar"]}
-    mock_response.text = "rule content"
-    mock_httpx.get.return_value = mock_response
-    
-    # Call the function with custom repo
-    result = import_threatflux_rules(
-        url="https://github.com/custom/repo",
-        branch="main"
-    )
-    
-    # Verify the result
+
+    # Setup mock response for rule files
+    mock_rule_response = MagicMock()
+    mock_rule_response.status_code = 200
+    mock_rule_response.text = "rule test { condition: true }"
+
+    # Configure httpx mock to return different responses for different calls
+    mock_httpx.get.side_effect = [mock_test_response, mock_response, mock_rule_response, mock_rule_response]
+
+    # Call the function
+    result = import_threatflux_rules()
+
+    # Verify results
+    assert result["success"] is True
+    # Verify yara_service was called
+    assert mock_yara_service.add_rule.call_count >= 1
+    mock_yara_service.load_rules.assert_called_once()
+
+
+@patch("yaraflux_mcp_server.mcp_tools.rule_tools.httpx")
+@patch("yaraflux_mcp_server.mcp_tools.rule_tools.yara_service")
+def test_import_threatflux_rules_with_custom_url(mock_yara_service, mock_httpx):
+    """Test import_threatflux_rules with custom URL."""
+    # Setup mock test response
+    mock_test_response = MagicMock()
+    mock_test_response.status_code = 200
+
+    # Setup mock response for index.json
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"rules": ["rule1.yar"]}
+
+    # Setup mock response for rule file
+    mock_rule_response = MagicMock()
+    mock_rule_response.status_code = 200
+    mock_rule_response.text = "rule test { condition: true }"
+
+    # Configure httpx mock to return different responses
+    mock_httpx.get.side_effect = [mock_test_response, mock_response, mock_rule_response]
+
+    # Call the function with custom URL
+    result = import_threatflux_rules(url="https://github.com/custom/repo")
+
+    # Verify results
+    assert result["success"] is True
+
+    # Verify connection test was made first
+    mock_httpx.get.assert_any_call("https://raw.githubusercontent.com/custom/repo", timeout=10)
+
+
+@patch("yaraflux_mcp_server.mcp_tools.rule_tools.httpx")
+@patch("yaraflux_mcp_server.mcp_tools.rule_tools.yara_service")
+def test_import_threatflux_rules_no_index(mock_yara_service, mock_httpx):
+    """Test import_threatflux_rules with no index.json."""
+    # Setup initial test response (success)
+    mock_test_response = MagicMock()
+    mock_test_response.status_code = 200
+
+    # Setup mock response for index.json (not found)
+    mock_response = MagicMock()
+    mock_response.status_code = 404
+
+    # Setup mock response for rule file
+    mock_rule_response = MagicMock()
+    mock_rule_response.status_code = 200
+    mock_rule_response.text = "rule test { condition: true }"
+
+    # Configure httpx mock to return different responses
+    # First 200 for test, then 404 for index, then a few 200s for rule files
+    mock_httpx.get.side_effect = [mock_test_response, mock_response, mock_rule_response, mock_rule_response]
+
+    # Call the function
+    result = import_threatflux_rules()
+
+    # Still should successfully import some rules
+    assert result["success"] is True
+
+
+@patch("yaraflux_mcp_server.mcp_tools.rule_tools.httpx")
+@patch("yaraflux_mcp_server.mcp_tools.rule_tools.yara_service")
+def test_import_threatflux_rules_error(mock_yara_service, mock_httpx):
+    """Test import_threatflux_rules with error."""
+    # Setup httpx to raise an exception for the first get call
+    mock_httpx.get.side_effect = Exception("Connection error")
+
+    # Call the function
+    result = import_threatflux_rules()
+
+    # Verify results - with our new connection test implementation
     assert isinstance(result, dict)
     assert "success" in result
-    assert result["success"] is True
-    
-    # Verify httpx.get called with correct URL
-    custom_url = "https://raw.githubusercontent.com/custom/repo/main/index.json"
-    mock_httpx.get.assert_any_call(custom_url, follow_redirects=True)
-
-
-@patch('yaraflux_mcp_server.mcp_tools.rule_tools.httpx')
-def test_import_threatflux_rules_error(mock_httpx):
-    """Test import_threatflux_rules tool with error."""
-    # Set up the mock to raise an exception
-    mock_httpx.get.side_effect = Exception("Connection error")
-    
-    # Call the function
-    result = import_threatflux_rules(
-        url="https://github.com/nonexistent/repo"
-    )
-    
-    # Verify result has error
-    assert "success" in result
-    # The implementation might return success=True even on error, so check for error message
+    assert not result["success"]  # Should be False
     assert "message" in result
-    assert "error" in result["message"].lower() or "failed" in result["message"].lower()
+    assert "Connection error" in result["message"]
+    assert "error" in result

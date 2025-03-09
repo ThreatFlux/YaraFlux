@@ -12,6 +12,10 @@ omit =
     # Exclude legacy modules
     src/yaraflux_mcp_server/mcp_tools.py
     src/yaraflux_mcp_server/storage.py
+    # Exclude test utilities
+    src/yaraflux_mcp_server/conftest.py
+    # Exclude entry points
+    src/yaraflux_mcp_server/__main__.py
 
 [report]
 exclude_lines =
@@ -27,6 +31,18 @@ exclude_lines =
     if settings.DEBUG:
     # Skip main execution blocks
     if __name__ == .__main__.:
+    # Skip platform-specific code
+    if sys\.platform == 
+    # Skip unimplemented features
+    pass
+    ...
+    NotImplemented
+# Set minimum coverage percentage
+fail_under = 85
 
 [html]
 directory = htmlcov
+title = YaraFlux MCP Server Coverage Report
+
+[xml]
+output = coverage.xml

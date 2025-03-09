@@ -1,16 +1,16 @@
 """Unit tests for rules router."""
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-from io import BytesIO
 
+from io import BytesIO
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from yaraflux_mcp_server.routers.rules import router
 from yaraflux_mcp_server.auth import get_current_active_user, validate_admin
 from yaraflux_mcp_server.models import User, UserRole, YaraRuleMetadata
+from yaraflux_mcp_server.routers.rules import router
 from yaraflux_mcp_server.yara_service import YaraError
-
 
 # Create test app
 app = FastAPI()
@@ -20,23 +20,13 @@ app.include_router(router)
 @pytest.fixture
 def test_user():
     """Test user fixture."""
-    return User(
-        username="testuser",
-        role=UserRole.USER,
-        disabled=False,
-        email="test@example.com"
-    )
+    return User(username="testuser", role=UserRole.USER, disabled=False, email="test@example.com")
 
 
 @pytest.fixture
 def test_admin():
     """Test admin user fixture."""
-    return User(
-        username="testadmin",
-        role=UserRole.ADMIN,
-        disabled=False,
-        email="admin@example.com"
-    )
+    return User(username="testadmin", role=UserRole.ADMIN, disabled=False, email="admin@example.com")
 
 
 @pytest.fixture
@@ -99,17 +89,17 @@ class TestListRules:
         """Test listing rules successfully."""
         # Setup mock
         mock_yara_service.list_rules.return_value = [sample_rule_metadata]
-        
+
         # Make request
         response = client_with_user.get("/rules/")
-        
+
         # Check response
         assert response.status_code == 200
         result = response.json()
         assert len(result) == 1
         assert result[0]["name"] == "test_rule"
         assert result[0]["source"] == "custom"
-        
+
         # Verify service was called
         mock_yara_service.list_rules.assert_called_once_with(None)
 
@@ -118,13 +108,13 @@ class TestListRules:
         """Test listing rules with source filter."""
         # Setup mock
         mock_yara_service.list_rules.return_value = [sample_rule_metadata]
-        
+
         # Make request
         response = client_with_user.get("/rules/?source=custom")
-        
+
         # Check response
         assert response.status_code == 200
-        
+
         # Verify service was called with source
         mock_yara_service.list_rules.assert_called_once_with("custom")
 
@@ -133,10 +123,10 @@ class TestListRules:
         """Test listing rules with error."""
         # Setup mock with error
         mock_yara_service.list_rules.side_effect = YaraError("Failed to list rules")
-        
+
         # Make request
         response = client_with_user.get("/rules/")
-        
+
         # Check response
         assert response.status_code == 500
         assert "Failed to list rules" in response.json()["detail"]
@@ -151,10 +141,10 @@ class TestGetRule:
         # Setup mocks
         mock_yara_service.get_rule.return_value = sample_rule_content
         mock_yara_service.list_rules.return_value = [sample_rule_metadata]
-        
+
         # Make request
         response = client_with_user.get("/rules/test_rule")
-        
+
         # Check response
         assert response.status_code == 200
         result = response.json()
@@ -162,7 +152,7 @@ class TestGetRule:
         assert result["source"] == "custom"
         assert "test string" in result["content"]
         assert "metadata" in result
-        
+
         # Verify service was called
         mock_yara_service.get_rule.assert_called_once_with("test_rule", "custom")
 
@@ -172,13 +162,13 @@ class TestGetRule:
         # Setup mocks
         mock_yara_service.get_rule.return_value = sample_rule_content
         mock_yara_service.list_rules.return_value = [sample_rule_metadata]
-        
+
         # Make request
         response = client_with_user.get("/rules/test_rule?source=community")
-        
+
         # Check response
         assert response.status_code == 200
-        
+
         # Verify service was called with correct source
         mock_yara_service.get_rule.assert_called_once_with("test_rule", "community")
 
@@ -187,10 +177,10 @@ class TestGetRule:
         """Test getting non-existent rule."""
         # Setup mock with error
         mock_yara_service.get_rule.side_effect = YaraError("Rule not found")
-        
+
         # Make request
         response = client_with_user.get("/rules/nonexistent_rule")
-        
+
         # Check response
         assert response.status_code == 404
         assert "Rule not found" in response.json()["detail"]
@@ -204,15 +194,15 @@ class TestGetRuleRaw:
         """Test getting raw rule content successfully."""
         # Setup mock
         mock_yara_service.get_rule.return_value = sample_rule_content
-        
+
         # Make request
         response = client_with_user.get("/rules/test_rule/raw")
-        
+
         # Check response
         assert response.status_code == 200
         assert "text/plain" in response.headers["content-type"]
         assert "test string" in response.text
-        
+
         # Verify service was called
         mock_yara_service.get_rule.assert_called_once_with("test_rule", "custom")
 
@@ -221,10 +211,10 @@ class TestGetRuleRaw:
         """Test getting raw content for non-existent rule."""
         # Setup mock with error
         mock_yara_service.get_rule.side_effect = YaraError("Rule not found")
-        
+
         # Make request
         response = client_with_user.get("/rules/nonexistent_rule/raw")
-        
+
         # Check response
         assert response.status_code == 404
         assert "Rule not found" in response.json()["detail"]
@@ -238,23 +228,19 @@ class TestCreateRule:
         """Test creating rule successfully."""
         # Setup mock
         mock_yara_service.add_rule.return_value = sample_rule_metadata
-        
+
         # Prepare request data
-        rule_data = {
-            "name": "test_rule",
-            "content": sample_rule_content,
-            "source": "custom"
-        }
-        
+        rule_data = {"name": "test_rule", "content": sample_rule_content, "source": "custom"}
+
         # Make request
         response = client_with_user.post("/rules/", json=rule_data)
-        
+
         # Check response
         assert response.status_code == 200
         result = response.json()
         assert result["name"] == "test_rule"
         assert result["source"] == "custom"
-        
+
         # Verify service was called
         mock_yara_service.add_rule.assert_called_once_with("test_rule", sample_rule_content)
 
@@ -263,17 +249,13 @@ class TestCreateRule:
         """Test creating invalid rule."""
         # Setup mock with error
         mock_yara_service.add_rule.side_effect = YaraError("Invalid YARA syntax")
-        
+
         # Prepare request data
-        rule_data = {
-            "name": "invalid_rule",
-            "content": "invalid content",
-            "source": "custom"
-        }
-        
+        rule_data = {"name": "invalid_rule", "content": "invalid content", "source": "custom"}
+
         # Make request
         response = client_with_user.post("/rules/", json=rule_data)
-        
+
         # Check response
         assert response.status_code == 400
         assert "Invalid YARA syntax" in response.json()["detail"]
@@ -287,40 +269,38 @@ class TestUploadRule:
         """Test uploading rule file successfully."""
         # Setup mock
         mock_yara_service.add_rule.return_value = sample_rule_metadata
-        
+
         # Create test file
-        file_content = sample_rule_content.encode('utf-8')
+        file_content = sample_rule_content.encode("utf-8")
         file = {"rule_file": ("test_rule.yar", BytesIO(file_content), "text/plain")}
-        
+
         # Additional form data
         data = {"source": "custom"}
-        
+
         # Make request
         response = client_with_user.post("/rules/upload", files=file, data=data)
-        
+
         # Check response
         assert response.status_code == 200
         result = response.json()
         assert result["name"] == "test_rule"
-        
+
         # Verify service was called correctly
-        mock_yara_service.add_rule.assert_called_once_with(
-            "test_rule.yar", sample_rule_content, "custom"
-        )
+        mock_yara_service.add_rule.assert_called_once_with("test_rule.yar", sample_rule_content, "custom")
 
     @patch("yaraflux_mcp_server.routers.rules.yara_service")
     def test_upload_rule_invalid(self, mock_yara_service, client_with_user):
         """Test uploading invalid rule file."""
         # Setup mock with error
         mock_yara_service.add_rule.side_effect = YaraError("Invalid YARA syntax")
-        
+
         # Create test file
         file_content = b"invalid rule content"
         file = {"rule_file": ("invalid.yar", BytesIO(file_content), "text/plain")}
-        
+
         # Make request
         response = client_with_user.post("/rules/upload", files=file)
-        
+
         # Check response
         assert response.status_code == 400
         assert "Invalid YARA syntax" in response.json()["detail"]
@@ -329,7 +309,7 @@ class TestUploadRule:
         """Test uploading without file."""
         # Make request without file
         response = client_with_user.post("/rules/upload")
-        
+
         # Check response
         assert response.status_code == 422  # Validation error
         assert "field required" in response.text.lower()
@@ -343,35 +323,27 @@ class TestUpdateRule:
         """Test updating rule successfully."""
         # Setup mock
         mock_yara_service.update_rule.return_value = sample_rule_metadata
-        
+
         # Make request
-        response = client_with_user.put(
-            "/rules/test_rule",
-            json=sample_rule_content
-        )
-        
+        response = client_with_user.put("/rules/test_rule", json=sample_rule_content)
+
         # Check response
         assert response.status_code == 200
         result = response.json()
         assert result["name"] == "test_rule"
-        
+
         # Verify service was called correctly
-        mock_yara_service.update_rule.assert_called_once_with(
-            "test_rule", sample_rule_content, "custom"
-        )
+        mock_yara_service.update_rule.assert_called_once_with("test_rule", sample_rule_content, "custom")
 
     @patch("yaraflux_mcp_server.routers.rules.yara_service")
     def test_update_rule_not_found(self, mock_yara_service, client_with_user, sample_rule_content):
         """Test updating non-existent rule."""
         # Setup mock with not found error
         mock_yara_service.update_rule.side_effect = YaraError("Rule not found")
-        
+
         # Make request
-        response = client_with_user.put(
-            "/rules/nonexistent_rule",
-            json=sample_rule_content
-        )
-        
+        response = client_with_user.put("/rules/nonexistent_rule", json=sample_rule_content)
+
         # Check response
         assert response.status_code == 404
         assert "Rule not found" in response.json()["detail"]
@@ -381,13 +353,10 @@ class TestUpdateRule:
         """Test updating rule with invalid content."""
         # Setup mock with validation error
         mock_yara_service.update_rule.side_effect = YaraError("Invalid YARA syntax")
-        
+
         # Make request
-        response = client_with_user.put(
-            "/rules/test_rule",
-            json="invalid content"
-        )
-        
+        response = client_with_user.put("/rules/test_rule", json="invalid content")
+
         # Check response
         assert response.status_code == 400
         assert "Invalid YARA syntax" in response.json()["detail"]
@@ -397,41 +366,37 @@ class TestUpdateRulePlain:
     """Tests for update_rule_plain endpoint."""
 
     @patch("yaraflux_mcp_server.routers.rules.yara_service")
-    def test_update_rule_plain_success(self, mock_yara_service, client_with_user, sample_rule_metadata, sample_rule_content):
+    def test_update_rule_plain_success(
+        self, mock_yara_service, client_with_user, sample_rule_metadata, sample_rule_content
+    ):
         """Test updating rule with plain text successfully."""
         # Setup mock
         mock_yara_service.update_rule.return_value = sample_rule_metadata
-        
+
         # Make request with plain text content
         response = client_with_user.put(
-            "/rules/test_rule/plain?source=custom",
-            content=sample_rule_content,
-            headers={"Content-Type": "text/plain"}
+            "/rules/test_rule/plain?source=custom", content=sample_rule_content, headers={"Content-Type": "text/plain"}
         )
-        
+
         # Check response
         assert response.status_code == 200
         result = response.json()
         assert result["name"] == "test_rule"
-        
+
         # Verify service was called correctly
-        mock_yara_service.update_rule.assert_called_once_with(
-            "test_rule", sample_rule_content, "custom"
-        )
+        mock_yara_service.update_rule.assert_called_once_with("test_rule", sample_rule_content, "custom")
 
     @patch("yaraflux_mcp_server.routers.rules.yara_service")
     def test_update_rule_plain_not_found(self, mock_yara_service, client_with_user, sample_rule_content):
         """Test updating non-existent rule with plain text."""
         # Setup mock with not found error
         mock_yara_service.update_rule.side_effect = YaraError("Rule not found")
-        
+
         # Make request
         response = client_with_user.put(
-            "/rules/nonexistent_rule/plain",
-            content=sample_rule_content,
-            headers={"Content-Type": "text/plain"}
+            "/rules/nonexistent_rule/plain", content=sample_rule_content, headers={"Content-Type": "text/plain"}
         )
-        
+
         # Check response
         assert response.status_code == 404
         assert "Rule not found" in response.json()["detail"]
@@ -445,15 +410,15 @@ class TestDeleteRule:
         """Test deleting rule successfully."""
         # Setup mock
         mock_yara_service.delete_rule.return_value = True
-        
+
         # Make request
         response = client_with_user.delete("/rules/test_rule")
-        
+
         # Check response
         assert response.status_code == 200
         result = response.json()
         assert "deleted" in result["message"]
-        
+
         # Verify service was called correctly
         mock_yara_service.delete_rule.assert_called_once_with("test_rule", "custom")
 
@@ -462,10 +427,10 @@ class TestDeleteRule:
         """Test deleting non-existent rule."""
         # Setup mock with not found result
         mock_yara_service.delete_rule.return_value = False
-        
+
         # Make request
         response = client_with_user.delete("/rules/nonexistent_rule")
-        
+
         # Check response
         assert response.status_code == 404
         assert "not found" in response.json()["detail"]
@@ -475,10 +440,10 @@ class TestDeleteRule:
         """Test deleting rule with error."""
         # Setup mock with error
         mock_yara_service.delete_rule.side_effect = YaraError("Failed to delete rule")
-        
+
         # Make request
         response = client_with_user.delete("/rules/test_rule")
-        
+
         # Check response
         assert response.status_code == 500
         assert "Failed to delete rule" in response.json()["detail"]
@@ -495,18 +460,18 @@ class TestImportRules:
             "success": True,
             "message": "Rules imported successfully",
             "imported": 10,
-            "failed": 0
+            "failed": 0,
         }
-        
+
         # Make request
         response = client_with_admin.post("/rules/import")
-        
+
         # Check response
         assert response.status_code == 200
         result = response.json()
         assert result["success"] is True
         assert result["imported"] == 10
-        
+
         # Verify tool was called with default parameters
         mock_import_tool.assert_called_once_with(None, "master")
 
@@ -515,13 +480,13 @@ class TestImportRules:
         """Test importing rules with custom parameters."""
         # Setup mock
         mock_import_tool.return_value = {"success": True, "message": "Rules imported successfully"}
-        
+
         # Make request with custom parameters
         response = client_with_admin.post("/rules/import?url=https://example.com/repo&branch=develop")
-        
+
         # Check response
         assert response.status_code == 200
-        
+
         # Verify tool was called with custom parameters
         mock_import_tool.assert_called_once_with("https://example.com/repo", "develop")
 
@@ -529,15 +494,11 @@ class TestImportRules:
     def test_import_rules_failure(self, mock_import_tool, client_with_admin):
         """Test import failure."""
         # Setup mock with failure result
-        mock_import_tool.return_value = {
-            "success": False,
-            "message": "Import failed",
-            "error": "Network error"
-        }
-        
+        mock_import_tool.return_value = {"success": False, "message": "Import failed", "error": "Network error"}
+
         # Make request
         response = client_with_admin.post("/rules/import")
-        
+
         # Check response
         assert response.status_code == 500
         assert "Import failed" in response.json()["detail"]
@@ -546,7 +507,7 @@ class TestImportRules:
         """Test import attempt by non-admin user."""
         # Make request with non-admin client
         response = client_with_user.post("/rules/import")
-        
+
         # Check response - should be blocked by auth
         assert response.status_code == 403
 
@@ -559,18 +520,15 @@ class TestValidateRule:
         """Test validating rule successfully with JSON content."""
         # Setup mock
         mock_validate_tool.return_value = {"valid": True, "message": "Rule is valid"}
-        
+
         # Make request with JSON format
-        response = client_with_user.post(
-            "/rules/validate",
-            json={"content": sample_rule_content}
-        )
-        
+        response = client_with_user.post("/rules/validate", json={"content": sample_rule_content})
+
         # Check response
         assert response.status_code == 200
         result = response.json()
         assert result["valid"] is True
-        
+
         # Verify validation was called
         mock_validate_tool.assert_called_once()
 
@@ -579,19 +537,17 @@ class TestValidateRule:
         """Test validating rule successfully with plain text content."""
         # Setup mock
         mock_validate_tool.return_value = {"valid": True, "message": "Rule is valid"}
-        
+
         # Make request with plain text
         response = client_with_user.post(
-            "/rules/validate",
-            content=sample_rule_content,
-            headers={"Content-Type": "text/plain"}
+            "/rules/validate", content=sample_rule_content, headers={"Content-Type": "text/plain"}
         )
-        
+
         # Check response
         assert response.status_code == 200
         result = response.json()
         assert result["valid"] is True
-        
+
         # Verify validation was called with the plain text content
         mock_validate_tool.assert_called_once_with(sample_rule_content)
 
@@ -602,16 +558,14 @@ class TestValidateRule:
         mock_validate_tool.return_value = {
             "valid": False,
             "message": "Syntax error",
-            "error_details": "line 3: syntax error, unexpected identifier"
+            "error_details": "line 3: syntax error, unexpected identifier",
         }
-        
+
         # Make request with invalid content
         response = client_with_user.post(
-            "/rules/validate",
-            content="invalid rule",
-            headers={"Content-Type": "text/plain"}
+            "/rules/validate", content="invalid rule", headers={"Content-Type": "text/plain"}
         )
-        
+
         # Check response
         assert response.status_code == 200  # Still 200 even for invalid rules
         result = response.json()
@@ -627,19 +581,17 @@ class TestValidateRulePlain:
         """Test validating rule with plain text endpoint."""
         # Setup mock
         mock_validate_tool.return_value = {"valid": True, "message": "Rule is valid"}
-        
+
         # Make request
         response = client_with_user.post(
-            "/rules/validate/plain",
-            content=sample_rule_content,
-            headers={"Content-Type": "text/plain"}
+            "/rules/validate/plain", content=sample_rule_content, headers={"Content-Type": "text/plain"}
         )
-        
+
         # Check response
         assert response.status_code == 200
         result = response.json()
         assert result["valid"] is True
-        
+
         # Verify tool was called with correct content
         mock_validate_tool.assert_called_once_with(sample_rule_content)
 
@@ -647,19 +599,14 @@ class TestValidateRulePlain:
     def test_validate_rule_plain_invalid(self, mock_validate_tool, client_with_user):
         """Test validating invalid rule with plain text endpoint."""
         # Setup mock for invalid rule
-        mock_validate_tool.return_value = {
-            "valid": False,
-            "message": "Syntax error at line 5"
-        }
-        
+        mock_validate_tool.return_value = {"valid": False, "message": "Syntax error at line 5"}
+
         # Make request with invalid content
-        invalid_content = "rule invalid { strings: $a = \"test condition: invalid }"
+        invalid_content = 'rule invalid { strings: $a = "test condition: invalid }'
         response = client_with_user.post(
-            "/rules/validate/plain",
-            content=invalid_content,
-            headers={"Content-Type": "text/plain"}
+            "/rules/validate/plain", content=invalid_content, headers={"Content-Type": "text/plain"}
         )
-        
+
         # Check response
         assert response.status_code == 200  # Still 200 for invalid rules
         result = response.json()
@@ -671,24 +618,26 @@ class TestCreateRulePlain:
     """Tests for create_rule_plain endpoint."""
 
     @patch("yaraflux_mcp_server.routers.rules.yara_service")
-    def test_create_rule_plain_success(self, mock_yara_service, client_with_user, sample_rule_metadata, sample_rule_content):
+    def test_create_rule_plain_success(
+        self, mock_yara_service, client_with_user, sample_rule_metadata, sample_rule_content
+    ):
         """Test creating rule with plain text successfully."""
         # Setup mock
         mock_yara_service.add_rule.return_value = sample_rule_metadata
-        
+
         # Make request
         response = client_with_user.post(
             "/rules/plain?rule_name=test_rule&source=custom",
             content=sample_rule_content,
-            headers={"Content-Type": "text/plain"}
+            headers={"Content-Type": "text/plain"},
         )
-        
+
         # Check response
         assert response.status_code == 200
         result = response.json()
         assert result["name"] == "test_rule"
         assert result["source"] == "custom"
-        
+
         # Verify service was called correctly
         mock_yara_service.add_rule.assert_called_once_with("test_rule", sample_rule_content, "custom")
 
@@ -697,14 +646,14 @@ class TestCreateRulePlain:
         """Test creating rule with invalid plain text."""
         # Setup mock with error
         mock_yara_service.add_rule.side_effect = YaraError("Invalid YARA syntax")
-        
+
         # Make request with invalid content
         response = client_with_user.post(
             "/rules/plain?rule_name=invalid_rule",
             content="invalid rule content",
-            headers={"Content-Type": "text/plain"}
+            headers={"Content-Type": "text/plain"},
         )
-        
+
         # Check response
         assert response.status_code == 400
         assert "Invalid YARA syntax" in response.json()["detail"]

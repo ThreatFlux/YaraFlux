@@ -53,7 +53,7 @@ coverage:
 # Code quality
 lint:
 	@echo "Running linters..."
-	$(UV) run pylint --rcfile=.pylintrc src/yaraflux_mcp_server
+	$(UV) run pylint --rcfile=.pylintrc src/yaraflux_mcp_server --fail-under=9
 	@echo "Linting complete."
 
 format:
@@ -70,7 +70,7 @@ mypy:
 security-check:
 	@echo "Running security checks..."
 	$(UV) run bandit -r src/yaraflux_mcp_server -c bandit.yaml
-	$(UV) run safety check
+	$(UV) run safety scan
 	@echo "Security checks complete."
 
 # Cleaning

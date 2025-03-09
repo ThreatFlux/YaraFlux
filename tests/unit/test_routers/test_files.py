@@ -1,19 +1,19 @@
 """Unit tests for files router."""
-import json
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-from datetime import datetime, UTC
-from uuid import UUID, uuid4
-from io import BytesIO
 
+import json
+from datetime import UTC, datetime
+from io import BytesIO
+from unittest.mock import MagicMock, Mock, patch
+from uuid import UUID, uuid4
+
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from yaraflux_mcp_server.routers.files import router
 from yaraflux_mcp_server.auth import get_current_active_user, validate_admin
-from yaraflux_mcp_server.models import User, UserRole, FileInfo, FileUploadResponse, FileString
+from yaraflux_mcp_server.models import FileInfo, FileString, FileUploadResponse, User, UserRole
+from yaraflux_mcp_server.routers.files import router
 from yaraflux_mcp_server.storage import StorageError
-
 
 # Create test app
 app = FastAPI()
@@ -23,23 +23,13 @@ app.include_router(router)
 @pytest.fixture
 def test_user():
     """Test user fixture."""
-    return User(
-        username="testuser",
-        role=UserRole.USER,
-        disabled=False,
-        email="test@example.com"
-    )
+    return User(username="testuser", role=UserRole.USER, disabled=False, email="test@example.com")
 
 
 @pytest.fixture
 def test_admin():
     """Test admin user fixture."""
-    return User(
-        username="testadmin",
-        role=UserRole.ADMIN,
-        disabled=False,
-        email="admin@example.com"
-    )
+    return User(username="testadmin", role=UserRole.ADMIN, disabled=False, email="admin@example.com")
 
 
 @pytest.fixture
@@ -74,7 +64,7 @@ def mock_file_info():
         "file_hash": "abcdef1234567890",
         "mime_type": "text/plain",
         "uploaded_at": datetime.now(UTC).isoformat(),
-        "metadata": {"uploader": "testuser"}
+        "metadata": {"uploader": "testuser"},
     }
 
 
@@ -92,19 +82,19 @@ class TestUploadFile:
         # Create test file
         file_content = b"Test file content"
         file = {"file": ("test.txt", BytesIO(file_content), "text/plain")}
-        
+
         # Optional metadata
         data = {"metadata": json.dumps({"test": "value"})}
-        
+
         # Make request
         response = client_with_user.post("/files/upload", files=file, data=data)
-        
+
         # Check response
         assert response.status_code == 200
         result = response.json()
         assert result["file_info"]["file_name"] == "test.txt"
         assert result["file_info"]["file_size"] == 100
-        
+
         # Verify storage was called correctly
         mock_storage.save_file.assert_called_once()
         args = mock_storage.save_file.call_args[0]
@@ -125,16 +115,16 @@ class TestUploadFile:
         # Create test file
         file_content = b"Test file content"
         file = {"file": ("test.txt", BytesIO(file_content), "text/plain")}
-        
+
         # Invalid metadata - not JSON
         data = {"metadata": "not-json"}
-        
+
         # Make request
         response = client_with_user.post("/files/upload", files=file, data=data)
-        
+
         # Check response (should still succeed but with empty metadata)
         assert response.status_code == 200
-        
+
         # Verify storage was called with empty metadata except for uploader
         mock_storage.save_file.assert_called_once()
         args = mock_storage.save_file.call_args[0]
@@ -152,10 +142,10 @@ class TestUploadFile:
         # Create test file
         file_content = b"Test file content"
         file = {"file": ("test.txt", BytesIO(file_content), "text/plain")}
-        
+
         # Make request
         response = client_with_user.post("/files/upload", files=file)
-        
+
         # Check response
         assert response.status_code == 500
         assert "Error uploading file" in response.json()["detail"]
@@ -171,11 +161,11 @@ class TestFileInfo:
         mock_storage = Mock()
         mock_get_storage.return_value = mock_storage
         mock_storage.get_file_info.return_value = mock_file_info
-        
+
         # Make request
         file_id = mock_file_info["file_id"]
         response = client_with_user.get(f"/files/info/{file_id}")
-        
+
         # Check response
         assert response.status_code == 200
         result = response.json()
@@ -190,11 +180,11 @@ class TestFileInfo:
         mock_storage = Mock()
         mock_get_storage.return_value = mock_storage
         mock_storage.get_file_info.side_effect = StorageError("File not found")
-        
+
         # Make request with random UUID
         file_id = str(uuid4())
         response = client_with_user.get(f"/files/info/{file_id}")
-        
+
         # Check response
         assert response.status_code == 404
         assert "File not found" in response.json()["detail"]
@@ -206,11 +196,11 @@ class TestFileInfo:
         mock_storage = Mock()
         mock_get_storage.return_value = mock_storage
         mock_storage.get_file_info.side_effect = Exception("Server error")
-        
+
         # Make request
         file_id = str(uuid4())
         response = client_with_user.get(f"/files/info/{file_id}")
-        
+
         # Check response
         assert response.status_code == 500
         assert "Error getting file info" in response.json()["detail"]
@@ -227,11 +217,11 @@ class TestDownloadFile:
         mock_get_storage.return_value = mock_storage
         mock_storage.get_file.return_value = b"Binary content"
         mock_storage.get_file_info.return_value = mock_file_info
-        
+
         # Make request
         file_id = mock_file_info["file_id"]
         response = client_with_user.get(f"/files/download/{file_id}")
-        
+
         # Check response
         assert response.status_code == 200
         assert response.content == b"Binary content"
@@ -247,11 +237,11 @@ class TestDownloadFile:
         mock_get_storage.return_value = mock_storage
         mock_storage.get_file.return_value = b"Text content"
         mock_storage.get_file_info.return_value = mock_file_info
-        
+
         # Make request
         file_id = mock_file_info["file_id"]
         response = client_with_user.get(f"/files/download/{file_id}?as_text=true")
-        
+
         # Check response
         assert response.status_code == 200
         assert response.text == "Text content"
@@ -263,16 +253,16 @@ class TestDownloadFile:
         # Setup mock storage with binary content that can't be decoded
         mock_storage = Mock()
         mock_get_storage.return_value = mock_storage
-        mock_storage.get_file.return_value = b"\xFF\xFE\xFD"  # Non-UTF8 bytes
+        mock_storage.get_file.return_value = b"\xff\xfe\xfd"  # Non-UTF8 bytes
         mock_storage.get_file_info.return_value = mock_file_info
-        
+
         # Make request
         file_id = mock_file_info["file_id"]
         response = client_with_user.get(f"/files/download/{file_id}?as_text=true")
-        
+
         # Check response - should fall back to binary
         assert response.status_code == 200
-        assert response.content == b"\xFF\xFE\xFD"
+        assert response.content == b"\xff\xfe\xfd"
         assert "text/plain" in response.headers["Content-Type"]
 
     @patch("yaraflux_mcp_server.routers.files.get_storage_client")
@@ -282,11 +272,11 @@ class TestDownloadFile:
         mock_storage = Mock()
         mock_get_storage.return_value = mock_storage
         mock_storage.get_file.side_effect = StorageError("File not found")
-        
+
         # Make request with random UUID
         file_id = str(uuid4())
         response = client_with_user.get(f"/files/download/{file_id}")
-        
+
         # Check response
         assert response.status_code == 404
         assert "File not found" in response.json()["detail"]
@@ -301,19 +291,14 @@ class TestListFiles:
         # Setup mock storage
         mock_storage = Mock()
         mock_get_storage.return_value = mock_storage
-        
+
         # Create mock result with list of files
-        mock_result = {
-            "files": [mock_file_info, mock_file_info],
-            "total": 2,
-            "page": 1,
-            "page_size": 100
-        }
+        mock_result = {"files": [mock_file_info, mock_file_info], "total": 2, "page": 1, "page_size": 100}
         mock_storage.list_files.return_value = mock_result
-        
+
         # Make request
         response = client_with_user.get("/files/list")
-        
+
         # Check response
         assert response.status_code == 200
         result = response.json()
@@ -329,13 +314,13 @@ class TestListFiles:
         mock_storage = Mock()
         mock_get_storage.return_value = mock_storage
         mock_storage.list_files.return_value = {"files": [], "total": 0, "page": 2, "page_size": 10}
-        
+
         # Make request with custom params
         response = client_with_user.get("/files/list?page=2&page_size=10&sort_by=file_name&sort_desc=false")
-        
+
         # Check response
         assert response.status_code == 200
-        
+
         # Verify storage was called with correct params
         mock_storage.list_files.assert_called_once_with(2, 10, "file_name", False)
 
@@ -346,10 +331,10 @@ class TestListFiles:
         mock_storage = Mock()
         mock_get_storage.return_value = mock_storage
         mock_storage.list_files.side_effect = Exception("Database error")
-        
+
         # Make request
         response = client_with_user.get("/files/list")
-        
+
         # Check response
         assert response.status_code == 500
         assert "Error listing files" in response.json()["detail"]
@@ -366,11 +351,11 @@ class TestDeleteFile:
         mock_get_storage.return_value = mock_storage
         mock_storage.get_file_info.return_value = mock_file_info
         mock_storage.delete_file.return_value = True
-        
+
         # Make request
         file_id = mock_file_info["file_id"]
         response = client_with_admin.delete(f"/files/{file_id}")
-        
+
         # Check response
         assert response.status_code == 200
         result = response.json()
@@ -385,11 +370,11 @@ class TestDeleteFile:
         mock_storage = Mock()
         mock_get_storage.return_value = mock_storage
         mock_storage.get_file_info.side_effect = StorageError("File not found")
-        
+
         # Make request with random UUID
         file_id = str(uuid4())
         response = client_with_admin.delete(f"/files/{file_id}")
-        
+
         # Check response
         assert response.status_code == 404
         assert "File not found" in response.json()["detail"]
@@ -402,11 +387,11 @@ class TestDeleteFile:
         mock_get_storage.return_value = mock_storage
         mock_storage.get_file_info.return_value = mock_file_info
         mock_storage.delete_file.return_value = False
-        
+
         # Make request
         file_id = mock_file_info["file_id"]
         response = client_with_admin.delete(f"/files/{file_id}")
-        
+
         # Check response
         assert response.status_code == 200  # Still returns 200 but with success=False
         result = response.json()
@@ -417,17 +402,17 @@ class TestDeleteFile:
         """Test deleting file as non-admin user."""
         # Non-admin users should not be able to delete files
         file_id = str(uuid4())
-        
+
         # Make request with non-admin client
         response = client_with_user.delete(f"/files/{file_id}")
-        
+
         # Check response - should be blocked by auth
         assert response.status_code == 403
 
 
 class TestExtractStrings:
     """Tests for extract_strings endpoint."""
-    
+
     @pytest.mark.skip("FileString model not defined in tests")
     @patch("yaraflux_mcp_server.routers.files.get_storage_client")
     def test_extract_strings_success(self, mock_get_storage, client_with_user, mock_file_info):
@@ -435,43 +420,36 @@ class TestExtractStrings:
         # Setup mock storage
         mock_storage = Mock()
         mock_get_storage.return_value = mock_storage
-        
+
         # Mock strings result
         strings_result = {
             "file_id": mock_file_info["file_id"],
             "file_name": mock_file_info["file_name"],
             "strings": [
                 {"string": "test string", "offset": 0, "string_type": "ascii"},
-                {"string": "another string", "offset": 20, "string_type": "unicode"}
+                {"string": "another string", "offset": 20, "string_type": "unicode"},
             ],
             "total_strings": 2,
             "min_length": 4,
             "include_unicode": True,
-            "include_ascii": True
+            "include_ascii": True,
         }
         mock_storage.extract_strings.return_value = strings_result
-        
+
         # Make request
         file_id = mock_file_info["file_id"]
-        request_data = {
-            "min_length": 4,
-            "include_unicode": True,
-            "include_ascii": True,
-            "limit": 100
-        }
+        request_data = {"min_length": 4, "include_unicode": True, "include_ascii": True, "limit": 100}
         response = client_with_user.post(f"/files/strings/{file_id}", json=request_data)
-        
+
         # Check response
         assert response.status_code == 200
         result = response.json()
         assert result["file_id"] == file_id
         assert result["file_name"] == mock_file_info["file_name"]
         assert len(result["strings"]) == 2
-        
+
         # Verify storage was called with correct params
-        mock_storage.extract_strings.assert_called_once_with(
-            file_id, 4, True, True, 100
-        )
+        mock_storage.extract_strings.assert_called_once_with(file_id, 4, True, True, 100)
 
     @patch("yaraflux_mcp_server.routers.files.get_storage_client")
     def test_extract_strings_not_found(self, mock_get_storage, client_with_user):
@@ -480,11 +458,11 @@ class TestExtractStrings:
         mock_storage = Mock()
         mock_get_storage.return_value = mock_storage
         mock_storage.extract_strings.side_effect = StorageError("File not found")
-        
+
         # Make request with random UUID
         file_id = str(uuid4())
         response = client_with_user.post(f"/files/strings/{file_id}", json={})
-        
+
         # Check response
         assert response.status_code == 404
         assert "File not found" in response.json()["detail"]
@@ -492,14 +470,14 @@ class TestExtractStrings:
 
 class TestGetHexView:
     """Tests for get_hex_view endpoint."""
-    
+
     @patch("yaraflux_mcp_server.routers.files.get_storage_client")
     def test_get_hex_view_success(self, mock_get_storage, client_with_user, mock_file_info):
         """Test getting hex view successfully."""
         # Setup mock storage
         mock_storage = Mock()
         mock_get_storage.return_value = mock_storage
-        
+
         # Mock hex view result
         hex_result = {
             "file_id": mock_file_info["file_id"],
@@ -509,30 +487,24 @@ class TestGetHexView:
             "length": 12,
             "total_size": 12,
             "bytes_per_line": 16,
-            "include_ascii": True
+            "include_ascii": True,
         }
         mock_storage.get_hex_view.return_value = hex_result
-        
+
         # Make request
         file_id = mock_file_info["file_id"]
-        request_data = {
-            "offset": 0,
-            "length": 12,
-            "bytes_per_line": 16
-        }
+        request_data = {"offset": 0, "length": 12, "bytes_per_line": 16}
         response = client_with_user.post(f"/files/hex/{file_id}", json=request_data)
-        
+
         # Check response
         assert response.status_code == 200
         result = response.json()
         assert result["file_id"] == file_id
         assert result["file_name"] == mock_file_info["file_name"]
         assert "Hello World!" in result["hex_content"]
-        
+
         # Verify storage was called with correct params
-        mock_storage.get_hex_view.assert_called_once_with(
-            file_id, 0, 12, 16
-        )
+        mock_storage.get_hex_view.assert_called_once_with(file_id, 0, 12, 16)
 
     @patch("yaraflux_mcp_server.routers.files.get_storage_client")
     def test_get_hex_view_not_found(self, mock_get_storage, client_with_user):
@@ -541,11 +513,11 @@ class TestGetHexView:
         mock_storage = Mock()
         mock_get_storage.return_value = mock_storage
         mock_storage.get_hex_view.side_effect = StorageError("File not found")
-        
+
         # Make request with random UUID
         file_id = str(uuid4())
         response = client_with_user.post(f"/files/hex/{file_id}", json={})
-        
+
         # Check response
         assert response.status_code == 404
         assert "File not found" in response.json()["detail"]
@@ -557,11 +529,11 @@ class TestGetHexView:
         mock_storage = Mock()
         mock_get_storage.return_value = mock_storage
         mock_storage.get_hex_view.side_effect = Exception("Error processing file")
-        
+
         # Make request
         file_id = str(uuid4())
         response = client_with_user.post(f"/files/hex/{file_id}", json={})
-        
+
         # Check response
         assert response.status_code == 500
         assert "Error getting hex view" in response.json()["detail"]

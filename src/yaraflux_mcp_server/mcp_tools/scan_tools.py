@@ -95,12 +95,26 @@ def scan_data(
         Scan result containing match details and file metadata
     """
     try:
+        # Validate parameters
+        if not filename:
+            raise ValueError("Filename cannot be empty")
+
+        if not data:
+            raise ValueError("Empty data")
+
         # Validate encoding
         if encoding not in ["base64", "text"]:
             raise ValueError(f"Unsupported encoding: {encoding}")
 
         # Decode the data
         if encoding == "base64":
+            # Validate base64 format before attempting to decode
+            # Check if the data contains valid base64 characters (allowing for padding)
+            import re
+
+            if not re.match(r"^[A-Za-z0-9+/]*={0,2}$", data):
+                raise ValueError("Invalid base64 format")
+
             try:
                 decoded_data = base64.b64decode(data)
             except Exception as e:
@@ -136,11 +150,11 @@ def scan_data(
 @register_tool()
 def get_scan_result(scan_id: str) -> Dict[str, Any]:
     """Get a scan result by ID.
-    
+
     This function retrieves previously saved scan results using their unique ID.
     It allows users to access historical scan data and analyze matches without
     rescanning the content.
-    
+
     For LLM users connecting through MCP, this can be invoked with natural language like:
     "Show me the results from scan abc123"
     "Retrieve the details for scan ID xyz789"
@@ -153,11 +167,28 @@ def get_scan_result(scan_id: str) -> Dict[str, Any]:
         Complete scan result including file metadata and any matches found
     """
     try:
+        # Validate scan_id
+        if not scan_id:
+            raise ValueError("Scan ID cannot be empty")
+
         # Get the result from storage
         storage = get_storage_client()
         result_data = storage.get_result(scan_id)
 
+        # Validate result_data is valid JSON
+        if isinstance(result_data, str):
+            try:
+                # Try to parse as JSON if it's a string
+                import json
+
+                result_data = json.loads(result_data)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"Invalid JSON result: {str(e)}")
+
         return {"success": True, "result": result_data}
+    except ValueError as e:
+        logger.error(f"Value error in get_scan_result: {str(e)}")
+        return {"success": False, "message": str(e)}
     except Exception as e:
         logger.error(f"Error getting scan result {scan_id}: {str(e)}")
         return {"success": False, "message": str(e)}

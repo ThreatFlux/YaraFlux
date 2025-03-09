@@ -52,7 +52,7 @@ mcp = FastMCP(
 
 def register_tools():
     """Register all MCP tools directly with the MCP server.
-    
+
     This approach preserves the full function signatures and docstrings,
     including natural language examples that show LLM users how to
     interact with these tools through MCP.

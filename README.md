@@ -1,9 +1,13 @@
 # YaraFlux MCP Server
 
-![GitHub License](https://img.shields.io/github/license/ThreatFlux/YaraFlux)
-![Python Version](https://img.shields.io/badge/python-3.13-blue)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.104.1-009688)
-![MCP](https://img.shields.io/badge/MCP-Integrated-blueviolet)
+[![CI](https://github.com/ThreatFlux/YaraFlux/workflows/CI/badge.svg)](https://github.com/ThreatFlux/YaraFlux/actions)
+[![codecov](https://codecov.io/gh/ThreatFlux/YaraFlux/branch/main/graph/badge.svg)](https://codecov.io/gh/ThreatFlux/YaraFlux)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/YOUR_PROJECT_ID)](https://app.codacy.com/gh/ThreatFlux/YaraFlux/dashboard)
+[![GitHub License](https://img.shields.io/github/license/ThreatFlux/YaraFlux)](https://github.com/ThreatFlux/YaraFlux/blob/main/LICENSE)
+[![Python Version](https://img.shields.io/badge/python-3.13-blue)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104.1-009688)](https://fastapi.tiangolo.com/)
+[![MCP](https://img.shields.io/badge/MCP-Integrated-blueviolet)](https://docs.anthropic.com/claude/docs/model-context-protocol)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 A Model Context Protocol (MCP) server for YARA scanning, providing LLMs with capabilities to analyze files with YARA rules.
 
@@ -258,6 +262,8 @@ yaraflux_mcp_server/
 
 ## 🧪 Development
 
+### Local Development
+
 ```bash
 # Set up development environment
 make dev-setup
@@ -276,6 +282,36 @@ make coverage
 # Run development server
 make run
 ```
+
+### CI/CD Workflows
+
+This project uses GitHub Actions for continuous integration and deployment:
+
+- **CI Tests**: Runs on every push and pull request to main and develop branches
+  - Runs tests, formatting, linting, and type checking
+  - Builds and tests Docker images
+  - Uploads test coverage reports to Codecov
+
+- **Version Auto-increment**: Automatically increments version on pushes to main branch
+  - Updates version in pyproject.toml, setup.py, and Dockerfile
+  - Creates git tag for new version
+
+- **Publish Release**: Triggered after successful version auto-increment
+  - Builds Docker images for multiple stages
+  - Generates release notes from git commits
+  - Creates GitHub release with artifacts
+  - Publishes Docker images to Docker Hub
+
+These workflows ensure code quality and automate the release process.
+
+### Status Checks
+
+The following status checks run on pull requests:
+
+- ✅ **Format Verification**: Ensures code follows Black and isort formatting standards
+- ✅ **Lint Verification**: Validates code quality and compliance with coding standards
+- ✅ **Test Execution**: Runs the full test suite to verify functionality
+- ✅ **Coverage Report**: Ensures sufficient test coverage of the codebase
 
 ## 🌐 API Documentation
 

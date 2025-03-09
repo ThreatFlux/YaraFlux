@@ -188,6 +188,10 @@ def delete_file(file_id: str) -> Dict[str, Any]:
         try:
             file_info = storage.get_file_info(file_id)
             file_name = file_info.get("file_name", "Unknown file")
+        except StorageError as e:
+            # Return error if get_file_info fails
+            logger.error(f"Error getting file info: {str(e)}")
+            return {"success": False, "message": f"Error deleting file: {str(e)}"}
         except Exception:
             file_name = "Unknown file"
 

@@ -47,7 +47,7 @@ FROM base AS production
 
 # Build arguments for metadata
 ARG BUILD_DATE
-ARG VERSION=0.1.0
+ARG VERSION=1.0.0
 
 # Add metadata
 LABEL org.opencontainers.image.created="${BUILD_DATE}" \
