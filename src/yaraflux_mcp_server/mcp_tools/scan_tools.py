@@ -27,6 +27,11 @@ def scan_url(
     It's particularly useful for scanning potentially malicious files without storing
     them locally on the user's machine.
 
+    For LLM users connecting through MCP, this can be invoked with natural language like:
+    "Can you scan this URL for malware: https://example.com/suspicious-file.exe"
+    "Analyze https://example.com/document.pdf for malicious patterns"
+    "Check if the file at this URL contains known threats: https://example.com/sample.exe"
+
     Args:
         url: URL of the file to scan
         rule_names: Optional list of rule names to match (if None, match all)
@@ -79,6 +84,15 @@ def scan_data(
 ) -> Dict[str, Any]:
     """Scan in-memory data with YARA rules.
 
+    This function scans provided binary or text data using YARA rules.
+    It supports both base64-encoded data and plain text, making it versatile
+    for various sources of potentially malicious content.
+
+    For LLM users connecting through MCP, this can be invoked with natural language like:
+    "Scan this base64 data: SGVsbG8gV29ybGQ="
+    "Can you check if this text contains malicious patterns: eval(atob('ZXZhbChwcm9tcHQoKSk7'))"
+    "Analyze this string for malware signatures: document.write(unescape('%3C%73%63%72%69%70%74%3E'))"
+
     Args:
         data: Data to scan (base64-encoded by default)
         filename: Name of the file for reference
@@ -88,7 +102,7 @@ def scan_data(
         timeout: Optional timeout in seconds (if None, use default)
 
     Returns:
-        Scan result
+        Scan result containing match details and file metadata
     """
 
     def _scan_data(
@@ -148,12 +162,21 @@ def scan_data(
 @register_tool()
 def get_scan_result(scan_id: str) -> Dict[str, Any]:
     """Get a scan result by ID.
+    
+    This function retrieves previously saved scan results using their unique ID.
+    It allows users to access historical scan data and analyze matches without
+    rescanning the content.
+    
+    For LLM users connecting through MCP, this can be invoked with natural language like:
+    "Show me the results from scan abc123"
+    "Retrieve the details for scan ID xyz789"
+    "What were the findings from my previous scan?"
 
     Args:
         scan_id: ID of the scan result
 
     Returns:
-        Scan result
+        Complete scan result including file metadata and any matches found
     """
 
     def _get_scan_result(scan_id: str) -> Dict[str, Any]:

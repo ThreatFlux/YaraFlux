@@ -51,7 +51,11 @@ mcp = FastMCP(
 
 
 def register_tools():
-    """Register all MCP tools using the tool registry and schemas."""
+    """Register all MCP tools using the tool registry and schemas.
+    
+    This preserves enhanced docstrings with natural language examples
+    that show LLM users how to interact with these tools through MCP.
+    """
     logger.info("Registering MCP tools...")
 
     # Scan tools
