@@ -1,8 +1,8 @@
 """File management tools for Claude MCP integration.
 
 This module provides tools for file operations including uploading, downloading,
-viewing hex dumps, and extracting strings from files. It uses standardized error
-handling and parameter validation.
+viewing hex dumps, and extracting strings from files. It uses direct function implementations
+with inline error handling.
 """
 
 import base64
@@ -11,7 +11,6 @@ from typing import Any, Dict, Optional
 
 from yaraflux_mcp_server.mcp_tools.base import register_tool
 from yaraflux_mcp_server.storage import StorageError, get_storage_client
-from yaraflux_mcp_server.utils.error_handling import safe_execute
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -26,6 +25,11 @@ def upload_file(
     This tool allows you to upload files with metadata for later retrieval and analysis.
     Files can be uploaded as base64-encoded data or plain text.
 
+    For LLM users connecting through MCP, this can be invoked with natural language like:
+    "Upload this file with base64 data: SGVsbG8gV29ybGQ="
+    "Save this text as a file named example.txt: This is the content"
+    "Store this code snippet as script.py with metadata indicating it's executable"
+
     Args:
         data: File content encoded as specified by the encoding parameter
         file_name: Name of the file
@@ -35,9 +39,7 @@ def upload_file(
     Returns:
         File information including ID, size, and metadata
     """
-
-    def _upload_file(data: str, file_name: str, encoding: str, metadata: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-        """Implementation function for upload_file."""
+    try:
         # Validate parameters
         if not data:
             raise ValueError("File data cannot be empty")
@@ -62,25 +64,25 @@ def upload_file(
         file_info = storage.save_file(file_name, decoded_data, metadata or {})
 
         return {"success": True, "message": f"File {file_name} uploaded successfully", "file_info": file_info}
-
-    # Execute with standardized error handling
-    return safe_execute(
-        "upload_file",
-        _upload_file,
-        data=data,
-        file_name=file_name,
-        encoding=encoding,
-        metadata=metadata,
-        error_handlers={
-            ValueError: lambda e: {"success": False, "message": str(e)},
-            StorageError: lambda e: {"success": False, "message": f"Storage error: {str(e)}"},
-        },
-    )
+    except ValueError as e:
+        logger.error(f"Value error in upload_file: {str(e)}")
+        return {"success": False, "message": str(e)}
+    except StorageError as e:
+        logger.error(f"Storage error in upload_file: {str(e)}")
+        return {"success": False, "message": f"Storage error: {str(e)}"}
+    except Exception as e:
+        logger.error(f"Unexpected error in upload_file: {str(e)}")
+        return {"success": False, "message": f"Unexpected error: {str(e)}"}
 
 
 @register_tool()
 def get_file_info(file_id: str) -> Dict[str, Any]:
     """Get detailed information about a file.
+
+    For LLM users connecting through MCP, this can be invoked with natural language like:
+    "Get details about file abc123"
+    "Show me the metadata for file xyz789"
+    "What's the size and upload date of file 456def?"
 
     Args:
         file_id: ID of the file
@@ -88,9 +90,7 @@ def get_file_info(file_id: str) -> Dict[str, Any]:
     Returns:
         File information including metadata
     """
-
-    def _get_file_info(file_id: str) -> Dict[str, Any]:
-        """Implementation function for get_file_info."""
+    try:
         if not file_id:
             raise ValueError("File ID cannot be empty")
 
@@ -98,17 +98,15 @@ def get_file_info(file_id: str) -> Dict[str, Any]:
         file_info = storage.get_file_info(file_id)
 
         return {"success": True, "file_info": file_info}
-
-    # Execute with standardized error handling
-    return safe_execute(
-        "get_file_info",
-        _get_file_info,
-        file_id=file_id,
-        error_handlers={
-            StorageError: lambda e: {"success": False, "message": f"Error getting file info: {str(e)}"},
-            ValueError: lambda e: {"success": False, "message": str(e)},
-        },
-    )
+    except StorageError as e:
+        logger.error(f"Error getting file info: {str(e)}")
+        return {"success": False, "message": f"Error getting file info: {str(e)}"}
+    except ValueError as e:
+        logger.error(f"Value error in get_file_info: {str(e)}")
+        return {"success": False, "message": str(e)}
+    except Exception as e:
+        logger.error(f"Unexpected error in get_file_info: {str(e)}")
+        return {"success": False, "message": f"Unexpected error: {str(e)}"}
 
 
 @register_tool()
@@ -116,6 +114,12 @@ def list_files(
     page: int = 1, page_size: int = 100, sort_by: str = "uploaded_at", sort_desc: bool = True
 ) -> Dict[str, Any]:
     """List files with pagination and sorting.
+
+    For LLM users connecting through MCP, this can be invoked with natural language like:
+    "Show me all the uploaded files"
+    "List the most recently uploaded files first"
+    "Show files sorted by name in alphabetical order"
+    "List the largest files first"
 
     Args:
         page: Page number (1-based)
@@ -126,9 +130,7 @@ def list_files(
     Returns:
         List of files with pagination info
     """
-
-    def _list_files(page: int, page_size: int, sort_by: str, sort_desc: bool) -> Dict[str, Any]:
-        """Implementation function for list_files."""
+    try:
         # Validate parameters
         if page < 1:
             raise ValueError("Page number must be positive")
@@ -150,25 +152,25 @@ def list_files(
             "page": result.get("page", page),
             "page_size": result.get("page_size", page_size),
         }
-
-    # Execute with standardized error handling
-    return safe_execute(
-        "list_files",
-        _list_files,
-        page=page,
-        page_size=page_size,
-        sort_by=sort_by,
-        sort_desc=sort_desc,
-        error_handlers={
-            StorageError: lambda e: {"success": False, "message": f"Error listing files: {str(e)}"},
-            ValueError: lambda e: {"success": False, "message": str(e)},
-        },
-    )
+    except StorageError as e:
+        logger.error(f"Error listing files: {str(e)}")
+        return {"success": False, "message": f"Error listing files: {str(e)}"}
+    except ValueError as e:
+        logger.error(f"Value error in list_files: {str(e)}")
+        return {"success": False, "message": str(e)}
+    except Exception as e:
+        logger.error(f"Unexpected error in list_files: {str(e)}")
+        return {"success": False, "message": f"Unexpected error: {str(e)}"}
 
 
 @register_tool()
 def delete_file(file_id: str) -> Dict[str, Any]:
     """Delete a file from storage.
+
+    For LLM users connecting through MCP, this can be invoked with natural language like:
+    "Delete file abc123"
+    "Remove the file with ID xyz789"
+    "Please get rid of file 456def"
 
     Args:
         file_id: ID of the file to delete
@@ -176,9 +178,7 @@ def delete_file(file_id: str) -> Dict[str, Any]:
     Returns:
         Deletion result
     """
-
-    def _delete_file(file_id: str) -> Dict[str, Any]:
-        """Implementation function for delete_file."""
+    try:
         if not file_id:
             raise ValueError("File ID cannot be empty")
 
@@ -198,17 +198,15 @@ def delete_file(file_id: str) -> Dict[str, Any]:
             return {"success": True, "message": f"File {file_name} deleted successfully", "file_id": file_id}
         else:
             return {"success": False, "message": f"File {file_id} not found or could not be deleted"}
-
-    # Execute with standardized error handling
-    return safe_execute(
-        "delete_file",
-        _delete_file,
-        file_id=file_id,
-        error_handlers={
-            StorageError: lambda e: {"success": False, "message": f"Error deleting file: {str(e)}"},
-            ValueError: lambda e: {"success": False, "message": str(e)},
-        },
-    )
+    except StorageError as e:
+        logger.error(f"Error deleting file: {str(e)}")
+        return {"success": False, "message": f"Error deleting file: {str(e)}"}
+    except ValueError as e:
+        logger.error(f"Value error in delete_file: {str(e)}")
+        return {"success": False, "message": str(e)}
+    except Exception as e:
+        logger.error(f"Unexpected error in delete_file: {str(e)}")
+        return {"success": False, "message": f"Unexpected error: {str(e)}"}
 
 
 @register_tool()
@@ -224,6 +222,11 @@ def extract_strings(
     This tool extracts ASCII and/or Unicode strings from a file with a specified minimum length.
     It's useful for analyzing binary files or looking for embedded text in files.
 
+    For LLM users connecting through MCP, this can be invoked with natural language like:
+    "Extract strings from file abc123"
+    "Find all text strings in the file with ID xyz789"
+    "Show me any readable text in file 456def with at least 8 characters"
+
     Args:
         file_id: ID of the file
         min_length: Minimum string length
@@ -234,11 +237,7 @@ def extract_strings(
     Returns:
         Extracted strings and metadata
     """
-
-    def _extract_strings(
-        file_id: str, min_length: int, include_unicode: bool, include_ascii: bool, limit: Optional[int]
-    ) -> Dict[str, Any]:
-        """Implementation function for extract_strings."""
+    try:
         # Validate parameters
         if not file_id:
             raise ValueError("File ID cannot be empty")
@@ -262,21 +261,15 @@ def extract_strings(
             "include_unicode": result.get("include_unicode", include_unicode),
             "include_ascii": result.get("include_ascii", include_ascii),
         }
-
-    # Execute with standardized error handling
-    return safe_execute(
-        "extract_strings",
-        _extract_strings,
-        file_id=file_id,
-        min_length=min_length,
-        include_unicode=include_unicode,
-        include_ascii=include_ascii,
-        limit=limit,
-        error_handlers={
-            StorageError: lambda e: {"success": False, "message": f"Error extracting strings: {str(e)}"},
-            ValueError: lambda e: {"success": False, "message": str(e)},
-        },
-    )
+    except StorageError as e:
+        logger.error(f"Error extracting strings: {str(e)}")
+        return {"success": False, "message": f"Error extracting strings: {str(e)}"}
+    except ValueError as e:
+        logger.error(f"Value error in extract_strings: {str(e)}")
+        return {"success": False, "message": str(e)}
+    except Exception as e:
+        logger.error(f"Unexpected error in extract_strings: {str(e)}")
+        return {"success": False, "message": f"Unexpected error: {str(e)}"}
 
 
 @register_tool()
@@ -288,6 +281,11 @@ def get_hex_view(
     This tool provides a hexadecimal representation of file content with optional ASCII view.
     It's useful for examining binary files or seeing the raw content of text files.
 
+    For LLM users connecting through MCP, this can be invoked with natural language like:
+    "Show me a hex dump of file abc123"
+    "Display the hex representation of file xyz789"
+    "I need to see the raw bytes of file 456def"
+
     Args:
         file_id: ID of the file
         offset: Starting offset in bytes
@@ -297,9 +295,7 @@ def get_hex_view(
     Returns:
         Hexadecimal representation of file content
     """
-
-    def _get_hex_view(file_id: str, offset: int, length: Optional[int], bytes_per_line: int) -> Dict[str, Any]:
-        """Implementation function for get_hex_view."""
+    try:
         # Validate parameters
         if not file_id:
             raise ValueError("File ID cannot be empty")
@@ -326,20 +322,15 @@ def get_hex_view(
             "total_size": result.get("total_size", 0),
             "bytes_per_line": result.get("bytes_per_line", bytes_per_line),
         }
-
-    # Execute with standardized error handling
-    return safe_execute(
-        "get_hex_view",
-        _get_hex_view,
-        file_id=file_id,
-        offset=offset,
-        length=length,
-        bytes_per_line=bytes_per_line,
-        error_handlers={
-            StorageError: lambda e: {"success": False, "message": f"Error getting hex view: {str(e)}"},
-            ValueError: lambda e: {"success": False, "message": str(e)},
-        },
-    )
+    except StorageError as e:
+        logger.error(f"Error getting hex view: {str(e)}")
+        return {"success": False, "message": f"Error getting hex view: {str(e)}"}
+    except ValueError as e:
+        logger.error(f"Value error in get_hex_view: {str(e)}")
+        return {"success": False, "message": str(e)}
+    except Exception as e:
+        logger.error(f"Unexpected error in get_hex_view: {str(e)}")
+        return {"success": False, "message": f"Unexpected error: {str(e)}"}
 
 
 @register_tool()
@@ -348,6 +339,11 @@ def download_file(file_id: str, encoding: str = "base64") -> Dict[str, Any]:
 
     This tool retrieves the content of a file, returning it in the specified encoding.
 
+    For LLM users connecting through MCP, this can be invoked with natural language like:
+    "Download file abc123 and show me its contents"
+    "Get the content of file xyz789 as text if possible"
+    "Retrieve file 456def for me"
+
     Args:
         file_id: ID of the file to download
         encoding: Encoding for the returned data ("base64" or "text")
@@ -355,9 +351,7 @@ def download_file(file_id: str, encoding: str = "base64") -> Dict[str, Any]:
     Returns:
         File content and metadata
     """
-
-    def _download_file(file_id: str, encoding: str) -> Dict[str, Any]:
-        """Implementation function for download_file."""
+    try:
         # Validate parameters
         if not file_id:
             raise ValueError("File ID cannot be empty")
@@ -393,15 +387,12 @@ def download_file(file_id: str, encoding: str = "base64") -> Dict[str, Any]:
             "data": encoded_data,
             "encoding": encoding,
         }
-
-    # Execute with standardized error handling
-    return safe_execute(
-        "download_file",
-        _download_file,
-        file_id=file_id,
-        encoding=encoding,
-        error_handlers={
-            StorageError: lambda e: {"success": False, "message": f"Error downloading file: {str(e)}"},
-            ValueError: lambda e: {"success": False, "message": str(e)},
-        },
-    )
+    except StorageError as e:
+        logger.error(f"Error downloading file: {str(e)}")
+        return {"success": False, "message": f"Error downloading file: {str(e)}"}
+    except ValueError as e:
+        logger.error(f"Value error in download_file: {str(e)}")
+        return {"success": False, "message": str(e)}
+    except Exception as e:
+        logger.error(f"Unexpected error in download_file: {str(e)}")
+        return {"success": False, "message": f"Unexpected error: {str(e)}"}

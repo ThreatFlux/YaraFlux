@@ -51,43 +51,42 @@ mcp = FastMCP(
 
 
 def register_tools():
-    """Register all MCP tools using the tool registry and schemas.
+    """Register all MCP tools directly with the MCP server.
     
-    This preserves enhanced docstrings with natural language examples
-    that show LLM users how to interact with these tools through MCP.
+    This approach preserves the full function signatures and docstrings,
+    including natural language examples that show LLM users how to
+    interact with these tools through MCP.
     """
     logger.info("Registering MCP tools...")
 
     # Scan tools
-    register_tool_with_schema(mcp, "scan_url", scan_url_func, TOOL_SCHEMAS["scan_url"])
-    register_tool_with_schema(mcp, "scan_data", scan_data_func, TOOL_SCHEMAS["scan_data"])
-    register_tool_with_schema(mcp, "get_scan_result", get_scan_result_func, TOOL_SCHEMAS["get_scan_result"])
+    mcp.tool(name="scan_url")(scan_url_func)
+    mcp.tool(name="scan_data")(scan_data_func)
+    mcp.tool(name="get_scan_result")(get_scan_result_func)
 
     # Rule tools
-    register_tool_with_schema(mcp, "list_yara_rules", list_yara_rules_func, TOOL_SCHEMAS["list_yara_rules"])
-    register_tool_with_schema(mcp, "get_yara_rule", get_yara_rule_func, TOOL_SCHEMAS["get_yara_rule"])
-    register_tool_with_schema(mcp, "validate_yara_rule", validate_yara_rule_func, TOOL_SCHEMAS["validate_yara_rule"])
-    register_tool_with_schema(mcp, "add_yara_rule", add_yara_rule_func, TOOL_SCHEMAS["add_yara_rule"])
-    register_tool_with_schema(mcp, "update_yara_rule", update_yara_rule_func, TOOL_SCHEMAS["update_yara_rule"])
-    register_tool_with_schema(mcp, "delete_yara_rule", delete_yara_rule_func, TOOL_SCHEMAS["delete_yara_rule"])
-    register_tool_with_schema(
-        mcp, "import_threatflux_rules", import_threatflux_rules_func, TOOL_SCHEMAS["import_threatflux_rules"]
-    )
+    mcp.tool(name="list_yara_rules")(list_yara_rules_func)
+    mcp.tool(name="get_yara_rule")(get_yara_rule_func)
+    mcp.tool(name="validate_yara_rule")(validate_yara_rule_func)
+    mcp.tool(name="add_yara_rule")(add_yara_rule_func)
+    mcp.tool(name="update_yara_rule")(update_yara_rule_func)
+    mcp.tool(name="delete_yara_rule")(delete_yara_rule_func)
+    mcp.tool(name="import_threatflux_rules")(import_threatflux_rules_func)
 
     # File tools
-    register_tool_with_schema(mcp, "upload_file", upload_file_func, TOOL_SCHEMAS["upload_file"])
-    register_tool_with_schema(mcp, "get_file_info", get_file_info_func, TOOL_SCHEMAS["get_file_info"])
-    register_tool_with_schema(mcp, "list_files", list_files_func, TOOL_SCHEMAS["list_files"])
-    register_tool_with_schema(mcp, "delete_file", delete_file_func, TOOL_SCHEMAS["delete_file"])
-    register_tool_with_schema(mcp, "extract_strings", extract_strings_func, TOOL_SCHEMAS["extract_strings"])
-    register_tool_with_schema(mcp, "get_hex_view", get_hex_view_func, TOOL_SCHEMAS["get_hex_view"])
-    register_tool_with_schema(mcp, "download_file", download_file_func, TOOL_SCHEMAS["download_file"])
+    mcp.tool(name="upload_file")(upload_file_func)
+    mcp.tool(name="get_file_info")(get_file_info_func)
+    mcp.tool(name="list_files")(list_files_func)
+    mcp.tool(name="delete_file")(delete_file_func)
+    mcp.tool(name="extract_strings")(extract_strings_func)
+    mcp.tool(name="get_hex_view")(get_hex_view_func)
+    mcp.tool(name="download_file")(download_file_func)
 
     # Storage tools
-    register_tool_with_schema(mcp, "get_storage_info", get_storage_info_func, TOOL_SCHEMAS["get_storage_info"])
-    register_tool_with_schema(mcp, "clean_storage", clean_storage_func, TOOL_SCHEMAS["clean_storage"])
+    mcp.tool(name="get_storage_info")(get_storage_info_func)
+    mcp.tool(name="clean_storage")(clean_storage_func)
 
-    logger.info(f"Registered {len(TOOL_SCHEMAS)} MCP tools successfully")
+    logger.info("Registered all MCP tools successfully")
 
 
 @mcp.resource("rules://{source}")

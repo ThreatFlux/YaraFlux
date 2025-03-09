@@ -1,8 +1,8 @@
 """YARA rule management tools for Claude MCP integration.
 
 This module provides tools for managing YARA rules, including listing,
-adding, updating, validating, and deleting rules. It uses standardized
-error handling and parameter validation.
+adding, updating, validating, and deleting rules. It uses direct function
+implementations with inline error handling.
 """
 
 import logging
@@ -14,7 +14,6 @@ from typing import Any, Dict, List, Optional
 import httpx
 
 from yaraflux_mcp_server.mcp_tools.base import register_tool
-from yaraflux_mcp_server.utils.error_handling import safe_execute
 from yaraflux_mcp_server.yara_service import YaraError, yara_service
 
 # Configure logging
@@ -25,15 +24,18 @@ logger = logging.getLogger(__name__)
 def list_yara_rules(source: Optional[str] = None) -> List[Dict[str, Any]]:
     """List available YARA rules.
 
+    For LLM users connecting through MCP, this can be invoked with natural language like:
+    "Show me all YARA rules"
+    "List custom YARA rules only"
+    "What community rules are available?"
+
     Args:
         source: Optional source filter ("custom" or "community")
 
     Returns:
         List of YARA rule metadata objects
     """
-
-    def _list_yara_rules(source: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Implementation function for list_yara_rules."""
+    try:
         # Validate source if provided
         if source and source not in ["custom", "community", "all"]:
             raise ValueError(f"Invalid source: {source}. Must be 'custom', 'community', or 'all'")
@@ -43,19 +45,22 @@ def list_yara_rules(source: Optional[str] = None) -> List[Dict[str, Any]]:
 
         # Convert to dict for serialization
         return [rule.dict() for rule in rules]
-
-    # Execute with standardized error handling
-    result = safe_execute("list_yara_rules", _list_yara_rules, source=source)
-
-    # Extract result value or return empty list on error
-    if result.get("success", False):
-        return result.get("result", [])
-    return []
+    except ValueError as e:
+        logger.error(f"Value error in list_yara_rules: {str(e)}")
+        return []
+    except Exception as e:
+        logger.error(f"Error listing YARA rules: {str(e)}")
+        return []
 
 
 @register_tool()
 def get_yara_rule(rule_name: str, source: str = "custom") -> Dict[str, Any]:
     """Get a YARA rule's content.
+
+    For LLM users connecting through MCP, this can be invoked with natural language like:
+    "Show me the code for rule suspicious_strings"
+    "Get the content of the ransomware detection rule"
+    "What does the CVE-2023-1234 rule look like?"
 
     Args:
         rule_name: Name of the rule to get
@@ -64,9 +69,7 @@ def get_yara_rule(rule_name: str, source: str = "custom") -> Dict[str, Any]:
     Returns:
         Rule content and metadata
     """
-
-    def _get_yara_rule(rule_name: str, source: str) -> Dict[str, Any]:
-        """Implementation function for get_yara_rule."""
+    try:
         # Validate source
         if source not in ["custom", "community"]:
             raise ValueError(f"Invalid source: {source}. Must be 'custom' or 'community'")
@@ -84,25 +87,33 @@ def get_yara_rule(rule_name: str, source: str = "custom") -> Dict[str, Any]:
 
         # Return content and metadata
         return {
-            "name": rule_name,
-            "source": source,
-            "content": content,
-            "metadata": metadata.dict() if metadata else {},
+            "success": True,
+            "result": {
+                "name": rule_name,
+                "source": source,
+                "content": content,
+                "metadata": metadata.dict() if metadata else {},
+            }
         }
-
-    # Execute with standardized error handling
-    return safe_execute(
-        "get_yara_rule",
-        _get_yara_rule,
-        rule_name=rule_name,
-        source=source,
-        error_handlers={YaraError: lambda e: {"name": rule_name, "source": source, "error": str(e)}},
-    )
+    except YaraError as e:
+        logger.error(f"YARA error in get_yara_rule: {str(e)}")
+        return {"success": False, "message": str(e), "name": rule_name, "source": source}
+    except ValueError as e:
+        logger.error(f"Value error in get_yara_rule: {str(e)}")
+        return {"success": False, "message": str(e), "name": rule_name, "source": source}
+    except Exception as e:
+        logger.error(f"Unexpected error in get_yara_rule: {str(e)}")
+        return {"success": False, "message": f"Unexpected error: {str(e)}", "name": rule_name, "source": source}
 
 
 @register_tool()
 def validate_yara_rule(content: str) -> Dict[str, Any]:
     """Validate a YARA rule.
+
+    For LLM users connecting through MCP, this can be invoked with natural language like:
+    "Check if this YARA rule syntax is valid"
+    "Validate this detection rule for me"
+    "Is this YARA code correctly formatted?"
 
     Args:
         content: YARA rule content to validate
@@ -110,18 +121,16 @@ def validate_yara_rule(content: str) -> Dict[str, Any]:
     Returns:
         Validation result with detailed error information if invalid
     """
-
-    def _validate_yara_rule(content: str) -> Dict[str, Any]:
-        """Implementation function for validate_yara_rule."""
+    try:
         if not content.strip():
             raise ValueError("Rule content cannot be empty")
 
         try:
             # Try to directly validate using YARA
-            import yara # noqa: F401
+            import yara  # noqa: F401
 
             # This will compile the rule but not save it
-            compiled_rule = yara.compile(source=content)
+            yara.compile(source=content)
 
             # If we reach here, the rule is valid
             return {"valid": True, "message": "Rule is valid"}
@@ -132,29 +141,29 @@ def validate_yara_rule(content: str) -> Dict[str, Any]:
             logger.debug(f"YARA compilation error: {error_message}")
             raise YaraError(f"Rule validation failed: {error_message}")
 
-    # Execute with standardized error handling
-    result = safe_execute(
-        "validate_yara_rule",
-        _validate_yara_rule,
-        content=content,
-        error_handlers={
-            YaraError: lambda e: {"valid": False, "message": str(e), "error_type": "YaraError"},
-            ValueError: lambda e: {"valid": False, "message": str(e), "error_type": "ValueError"},
-            Exception: lambda e: {
-                "valid": False,
-                "message": f"Unexpected error: {str(e)}",
-                "error_type": e.__class__.__name__,
-            },
-        },
-    )
-
-    # Result will already have the right structure from error_handlers
-    return result
+    except YaraError as e:
+        logger.error(f"YARA error in validate_yara_rule: {str(e)}")
+        return {"valid": False, "message": str(e), "error_type": "YaraError"}
+    except ValueError as e:
+        logger.error(f"Value error in validate_yara_rule: {str(e)}")
+        return {"valid": False, "message": str(e), "error_type": "ValueError"}
+    except Exception as e:
+        logger.error(f"Unexpected error in validate_yara_rule: {str(e)}")
+        return {
+            "valid": False,
+            "message": f"Unexpected error: {str(e)}",
+            "error_type": e.__class__.__name__,
+        }
 
 
 @register_tool()
 def add_yara_rule(name: str, content: str, source: str = "custom") -> Dict[str, Any]:
     """Add a new YARA rule.
+
+    For LLM users connecting through MCP, this can be invoked with natural language like:
+    "Create a new YARA rule named suspicious_urls"
+    "Add this detection rule for PowerShell obfuscation"
+    "Save this YARA rule to detect malicious macros"
 
     Args:
         name: Name of the rule
@@ -164,9 +173,7 @@ def add_yara_rule(name: str, content: str, source: str = "custom") -> Dict[str, 
     Returns:
         Result of the operation
     """
-
-    def _add_yara_rule(name: str, content: str, source: str) -> Dict[str, Any]:
-        """Implementation function for add_yara_rule."""
+    try:
         # Validate source
         if source not in ["custom", "community"]:
             raise ValueError(f"Invalid source: {source}. Must be 'custom' or 'community'")
@@ -183,24 +190,25 @@ def add_yara_rule(name: str, content: str, source: str = "custom") -> Dict[str, 
         metadata = yara_service.add_rule(name, content, source)
 
         return {"success": True, "message": f"Rule {name} added successfully", "metadata": metadata.dict()}
-
-    # Execute with standardized error handling
-    return safe_execute(
-        "add_yara_rule",
-        _add_yara_rule,
-        name=name,
-        content=content,
-        source=source,
-        error_handlers={
-            YaraError: lambda e: {"success": False, "message": str(e)},
-            ValueError: lambda e: {"success": False, "message": str(e)},
-        },
-    )
+    except YaraError as e:
+        logger.error(f"YARA error in add_yara_rule: {str(e)}")
+        return {"success": False, "message": str(e)}
+    except ValueError as e:
+        logger.error(f"Value error in add_yara_rule: {str(e)}")
+        return {"success": False, "message": str(e)}
+    except Exception as e:
+        logger.error(f"Unexpected error in add_yara_rule: {str(e)}")
+        return {"success": False, "message": f"Unexpected error: {str(e)}"}
 
 
 @register_tool()
 def update_yara_rule(name: str, content: str, source: str = "custom") -> Dict[str, Any]:
     """Update an existing YARA rule.
+
+    For LLM users connecting through MCP, this can be invoked with natural language like:
+    "Update the ransomware detection rule"
+    "Modify the suspicious_urls rule to include these new patterns"
+    "Fix the syntax error in the malicious_macros rule"
 
     Args:
         name: Name of the rule
@@ -210,9 +218,7 @@ def update_yara_rule(name: str, content: str, source: str = "custom") -> Dict[st
     Returns:
         Result of the operation
     """
-
-    def _update_yara_rule(name: str, content: str, source: str) -> Dict[str, Any]:
-        """Implementation function for update_yara_rule."""
+    try:
         # Validate source
         if source not in ["custom", "community"]:
             raise ValueError(f"Invalid source: {source}. Must be 'custom' or 'community'")
@@ -228,24 +234,25 @@ def update_yara_rule(name: str, content: str, source: str = "custom") -> Dict[st
         metadata = yara_service.update_rule(name, content, source)
 
         return {"success": True, "message": f"Rule {name} updated successfully", "metadata": metadata.dict()}
-
-    # Execute with standardized error handling
-    return safe_execute(
-        "update_yara_rule",
-        _update_yara_rule,
-        name=name,
-        content=content,
-        source=source,
-        error_handlers={
-            YaraError: lambda e: {"success": False, "message": str(e)},
-            ValueError: lambda e: {"success": False, "message": str(e)},
-        },
-    )
+    except YaraError as e:
+        logger.error(f"YARA error in update_yara_rule: {str(e)}")
+        return {"success": False, "message": str(e)}
+    except ValueError as e:
+        logger.error(f"Value error in update_yara_rule: {str(e)}")
+        return {"success": False, "message": str(e)}
+    except Exception as e:
+        logger.error(f"Unexpected error in update_yara_rule: {str(e)}")
+        return {"success": False, "message": f"Unexpected error: {str(e)}"}
 
 
 @register_tool()
 def delete_yara_rule(name: str, source: str = "custom") -> Dict[str, Any]:
     """Delete a YARA rule.
+
+    For LLM users connecting through MCP, this can be invoked with natural language like:
+    "Delete the ransomware detection rule"
+    "Remove the rule named suspicious_urls"
+    "Get rid of the outdated CVE-2020-1234 rule"
 
     Args:
         name: Name of the rule
@@ -254,9 +261,7 @@ def delete_yara_rule(name: str, source: str = "custom") -> Dict[str, Any]:
     Returns:
         Result of the operation
     """
-
-    def _delete_yara_rule(name: str, source: str) -> Dict[str, Any]:
-        """Implementation function for delete_yara_rule."""
+    try:
         # Validate source
         if source not in ["custom", "community"]:
             raise ValueError(f"Invalid source: {source}. Must be 'custom' or 'community'")
@@ -268,23 +273,25 @@ def delete_yara_rule(name: str, source: str = "custom") -> Dict[str, Any]:
             return {"success": True, "message": f"Rule {name} deleted successfully"}
         else:
             return {"success": False, "message": f"Rule {name} not found"}
-
-    # Execute with standardized error handling
-    return safe_execute(
-        "delete_yara_rule",
-        _delete_yara_rule,
-        name=name,
-        source=source,
-        error_handlers={
-            YaraError: lambda e: {"success": False, "message": str(e)},
-            ValueError: lambda e: {"success": False, "message": str(e)},
-        },
-    )
+    except YaraError as e:
+        logger.error(f"YARA error in delete_yara_rule: {str(e)}")
+        return {"success": False, "message": str(e)}
+    except ValueError as e:
+        logger.error(f"Value error in delete_yara_rule: {str(e)}")
+        return {"success": False, "message": str(e)}
+    except Exception as e:
+        logger.error(f"Unexpected error in delete_yara_rule: {str(e)}")
+        return {"success": False, "message": f"Unexpected error: {str(e)}"}
 
 
 @register_tool()
 def import_threatflux_rules(url: Optional[str] = None, branch: str = "master") -> Dict[str, Any]:
     """Import ThreatFlux YARA rules from GitHub.
+
+    For LLM users connecting through MCP, this can be invoked with natural language like:
+    "Import YARA rules from ThreatFlux"
+    "Get the latest detection rules from the ThreatFlux repository"
+    "Import YARA rules from a custom GitHub repo"
 
     Args:
         url: URL to the GitHub repository (if None, use default ThreatFlux repository)
@@ -293,9 +300,7 @@ def import_threatflux_rules(url: Optional[str] = None, branch: str = "master") -
     Returns:
         Import result
     """
-
-    def _import_threatflux_rules(url: Optional[str], branch: str) -> Dict[str, Any]:
-        """Implementation function for import_threatflux_rules."""
+    try:
         # Set default URL if not provided
         if url is None:
             url = "https://github.com/ThreatFlux/YARA-Rules"
@@ -415,15 +420,9 @@ def import_threatflux_rules(url: Optional[str] = None, branch: str = "master") -
             "import_count": import_count,
             "error_count": error_count,
         }
-
-    # Execute with standardized error handling
-    return safe_execute(
-        "import_threatflux_rules",
-        _import_threatflux_rules,
-        url=url,
-        branch=branch,
-        error_handlers={
-            YaraError: lambda e: {"success": False, "message": str(e)},
-            Exception: lambda e: {"success": False, "message": f"Error importing rules: {str(e)}"},
-        },
-    )
+    except YaraError as e:
+        logger.error(f"YARA error in import_threatflux_rules: {str(e)}")
+        return {"success": False, "message": str(e)}
+    except Exception as e:
+        logger.error(f"Unexpected error in import_threatflux_rules: {str(e)}")
+        return {"success": False, "message": f"Error importing rules: {str(e)}"}

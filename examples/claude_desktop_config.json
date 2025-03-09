@@ -26,7 +26,18 @@
         "validate_yara_rule",
         "get_hex_view",
         "upload_file",
-        "list_yara_rules"
+        "list_yara_rules",
+        "extract_strings",
+        "get_file_info",
+        "download_file",
+        "list_files",
+        "update_yara_rule",
+        "get_scan_result",
+        "get_storage_info",
+        "clean_storage",
+        "delete_yara_rule",
+        "delete_file",
+        "import_threatflux_rules"
       ],
       "pipeMode": "binary"
     }

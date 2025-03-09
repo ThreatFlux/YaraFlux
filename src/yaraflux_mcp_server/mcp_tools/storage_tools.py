@@ -1,7 +1,8 @@
 """Storage management tools for Claude MCP integration.
 
 This module provides tools for managing storage, including checking storage usage
-and cleaning up old files. It uses standardized error handling and parameter validation.
+and cleaning up old files. It uses direct function implementations with inline
+error handling.
 """
 
 import logging
@@ -10,7 +11,6 @@ from typing import Any, Dict, Optional
 
 from yaraflux_mcp_server.mcp_tools.base import register_tool
 from yaraflux_mcp_server.storage import get_storage_client
-from yaraflux_mcp_server.utils.error_handling import safe_execute
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -25,12 +25,15 @@ def get_storage_info() -> Dict[str, Any]:
     - Directory locations
     - File counts and sizes by storage type
 
+    For LLM users connecting through MCP, this can be invoked with natural language like:
+    "Show me storage usage information"
+    "How much space is being used by the system?"
+    "What files are stored and how much space do they take up?"
+
     Returns:
         Information about storage usage and configuration
     """
-
-    def _get_storage_info() -> Dict[str, Any]:
-        """Implementation function for get_storage_info."""
+    try:
         storage = get_storage_client()
 
         # Get storage configuration
@@ -116,9 +119,9 @@ def get_storage_info() -> Dict[str, Any]:
                 "usage": usage,
             },
         }
-
-    # Execute with standardized error handling
-    return safe_execute("get_storage_info", _get_storage_info)
+    except Exception as e:
+        logger.error(f"Error in get_storage_info: {str(e)}")
+        return {"success": False, "message": f"Error getting storage info: {str(e)}"}
 
 
 @register_tool()
@@ -128,6 +131,11 @@ def clean_storage(storage_type: str, older_than_days: Optional[int] = None) -> D
     This tool removes old files from storage to free up space. It can target
     specific storage types and age thresholds.
 
+    For LLM users connecting through MCP, this can be invoked with natural language like:
+    "Clean up old scan results"
+    "Remove files older than 30 days"
+    "Free up space by deleting old samples"
+
     Args:
         storage_type: Type of storage to clean ('results', 'samples', or 'all')
         older_than_days: Remove files older than X days (if None, use default)
@@ -135,9 +143,7 @@ def clean_storage(storage_type: str, older_than_days: Optional[int] = None) -> D
     Returns:
         Cleanup result with count of removed files and freed space
     """
-
-    def _clean_storage(storage_type: str, older_than_days: Optional[int] = None) -> Dict[str, Any]:
-        """Implementation function for clean_storage."""
+    try:
         if storage_type not in ["results", "samples", "all"]:
             raise ValueError(f"Invalid storage type: {storage_type}. Must be 'results', 'samples', or 'all'")
 
@@ -226,9 +232,12 @@ def clean_storage(storage_type: str, older_than_days: Optional[int] = None) -> D
             "freed_human": format_size(freed_bytes),
             "cutoff_date": cutoff_date.isoformat(),
         }
-
-    # Execute with standardized error handling
-    return safe_execute("clean_storage", _clean_storage, storage_type=storage_type, older_than_days=older_than_days)
+    except ValueError as e:
+        logger.error(f"Value error in clean_storage: {str(e)}")
+        return {"success": False, "message": str(e)}
+    except Exception as e:
+        logger.error(f"Unexpected error in clean_storage: {str(e)}")
+        return {"success": False, "message": f"Error cleaning storage: {str(e)}"}
 
 
 def format_size(size_bytes: int) -> str:
