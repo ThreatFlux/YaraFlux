@@ -1,4 +1,4 @@
-.PHONY: all clean install dev-setup test lint format docker-build docker-run docker-test mypy security-check coverage run import-rules lock sync check-deps get-version bump-version
+.PHONY: all clean install dev-setup test lint format build docker-build docker-run docker-test mypy security-check coverage run import-rules lock sync check-deps get-version bump-version
 
 # Default target
 all: clean install test lint
@@ -311,6 +311,12 @@ bump-version:
 	@echo "  git commit -m \"chore: bump version to $(NEW_VERSION)\""
 	@echo "  git tag -a \"v$(NEW_VERSION)\" -m \"Version $(NEW_VERSION)\""
 
+# Build package
+build:
+	@echo "Building Python package..."
+	$(UV) build
+	@echo "Package built successfully. See dist/ directory."
+
 help:
 	@echo "YaraFlux MCP Server Makefile"
 	@echo ""
@@ -335,4 +341,5 @@ help:
 	@echo " import-rules : Import ThreatFlux YARA rules"
 	@echo " get-version : Display current and next version numbers"
 	@echo " bump-version : Bump patch version in all relevant files"
+	@echo " build : Build Python package"
 	@echo ""

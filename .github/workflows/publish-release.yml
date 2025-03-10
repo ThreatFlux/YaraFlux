@@ -28,21 +28,31 @@ jobs:
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install build
+        make install
+        make dev-setup
+
+    - name: Display version information
+      run: |
+        # Check if make is available
+        if ! command -v make &> /dev/null
+        then
+            echo "Make could not be found, installing..."
+            sudo apt-get update
+            sudo apt-get install make
+        fi
+        echo "Getting version information using Makefile..."
+        make get-version
 
     - name: Get version
       id: get_version
       run: |
-        if [ -f "pyproject.toml" ]; then
-          VERSION=$(grep -oP '(?<=version = ")[^"]*' pyproject.toml)
-        else
-          VERSION=$(grep -oP '(?<=version=")[^"]*' setup.py)
-        fi
+        # Extract version directly from __init__.py (same as Makefile does)
+        VERSION=$(cat src/yaraflux_mcp_server/__init__.py | grep __version__ | sed -e "s/__version__ = \"\(.*\)\"/\1/")
+        echo "Detected version: $VERSION"
         echo "version=$VERSION" >> $GITHUB_OUTPUT
 
     - name: Build package
-      run: python -m build
+      run: make build
 
     - name: Build Docker images
       run: |
