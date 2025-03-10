@@ -44,18 +44,12 @@ jobs:
 
     - name: Build Docker stage
       run: |
-        docker build --target ${{ matrix.docker-stage }} \
-          -t yaraflux-mcp-server:${{ matrix.docker-stage }} .
+        make docker-build
 
     - name: Test Docker stage
       run: |
-        if [ "${{ matrix.docker-stage }}" = "production" ]; then
-          # Test production stage health check
-          docker run -d --name test-container yaraflux-mcp-server:${{ matrix.docker-stage }}
-          sleep 5
-          docker inspect --format='{{.State.Health.Status}}' test-container | grep -q healthy
-        fi
-
+        # Test production stage health check
+        make docker-test
     - name: Upload coverage reports
       uses: codecov/codecov-action@0565863a31f2c772f9f0395002a31e3f06189574  # v5.4.0
       env:

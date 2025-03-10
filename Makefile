@@ -1,4 +1,4 @@
-.PHONY: all clean install dev-setup test lint format docker-build docker-run mypy security-check coverage run import-rules lock sync check-deps
+.PHONY: all clean install dev-setup test lint format docker-build docker-run docker-test mypy security-check coverage run import-rules lock sync check-deps
 
 # Default target
 all: clean install test lint
@@ -12,6 +12,8 @@ VENV = .venv
 IMAGE_NAME = threatflux/yaraflux-mcp-server
 VERSION = $(shell cat src/yaraflux_mcp_server/__init__.py | grep __version__ | sed -e "s/__version__ = \"\(.*\)\"/\1/")
 DOCKER_TAG = $(IMAGE_NAME):$(VERSION)
+CONTAINER_NAME = yaraflux-mcp-test-container
+HEALTH_CHECK_TIMEOUT = 30
 
 # System detection
 OS = $(shell uname -s)
@@ -195,6 +197,63 @@ docker-run:
 	-e ADMIN_PASSWORD=your_admin_password \
 	$(DOCKER_TAG)
 
+# Docker test with health check
+docker-test:
+	@echo "Testing Docker container health check..."
+	@echo "Stopping and removing any existing test container..."
+	docker stop $(CONTAINER_NAME) >/dev/null 2>&1 || true
+	docker rm $(CONTAINER_NAME) >/dev/null 2>&1 || true
+	
+	@echo "Starting test container in detached mode..."
+	docker run -d --name $(CONTAINER_NAME) \
+		-e JWT_SECRET_KEY=test_jwt_key \
+		-e ADMIN_PASSWORD=test_admin_password \
+		$(DOCKER_TAG)
+	
+	@echo "Waiting $(HEALTH_CHECK_TIMEOUT) seconds for container to initialize..."
+	sleep $(HEALTH_CHECK_TIMEOUT)
+	
+	@echo "Checking container health status..."
+	@if docker inspect --format='{{.State.Health.Status}}' $(CONTAINER_NAME) 2>/dev/null | grep -q healthy; then \
+		echo "✅ Container health check passed: Status is healthy"; \
+	elif docker inspect --format='{{.State.Health.Status}}' $(CONTAINER_NAME) 2>/dev/null | grep -q starting; then \
+		echo "⚠️ Container is still starting up, might need more time"; \
+		exit 1; \
+	elif docker inspect --format='{{.State.Health.Status}}' $(CONTAINER_NAME) 2>/dev/null | grep -q unhealthy; then \
+		echo "❌ Container health check failed: Status is unhealthy"; \
+		docker logs $(CONTAINER_NAME); \
+		docker stop $(CONTAINER_NAME); \
+		docker rm $(CONTAINER_NAME); \
+		exit 1; \
+	else \
+		echo "❓ Container health check not configured or not available"; \
+		echo "Checking if container is running..."; \
+		if docker ps | grep -q $(CONTAINER_NAME); then \
+			echo "✅ Container is running, but no health check defined"; \
+			echo "Checking application status via HTTP request..."; \
+			if docker exec $(CONTAINER_NAME) wget -q -O- http://localhost:8000/health 2>/dev/null | grep -q -i "ok\|healthy\|up"; then \
+				echo "✅ Application is responding to health endpoint"; \
+			else \
+				echo "❌ Application is not responding to health endpoint"; \
+				docker logs $(CONTAINER_NAME); \
+				docker stop $(CONTAINER_NAME); \
+				docker rm $(CONTAINER_NAME); \
+				exit 1; \
+			fi; \
+		else \
+			echo "❌ Container is not running"; \
+			docker logs $(CONTAINER_NAME); \
+			docker rm $(CONTAINER_NAME); \
+			exit 1; \
+		fi; \
+	fi
+	
+	@echo "Stopping and removing test container..."
+	docker stop $(CONTAINER_NAME)
+	docker rm $(CONTAINER_NAME)
+	
+	@echo "✅ Docker test completed successfully"
+
 # Development
 run:
 	@echo "Running development server..."
@@ -224,6 +283,7 @@ help:
 	@echo " security-check : Run security checks"
 	@echo " docker-build : Build Docker image"
 	@echo " docker-run : Run Docker container"
+	@echo " docker-test : Test Docker container health status"
 	@echo " run : Run development server"
 	@echo " import-rules : Import ThreatFlux YARA rules"
 	@echo ""
