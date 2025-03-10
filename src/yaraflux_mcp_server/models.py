@@ -4,7 +4,7 @@ This module defines data models for requests, responses, and internal representa
 used by the YaraFlux MCP Server.
 """
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4

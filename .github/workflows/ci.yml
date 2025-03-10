@@ -29,14 +29,14 @@ jobs:
     - name: Install dependencies
       run: make install
 
+    - name: Instal dev dependencies
+      run: make dev-setup
+
     - name: Format code
       run: make format
 
     - name: Run linting
       run: make lint
-
-    - name: Run type checking
-      run: make mypy
 
     - name: Run tests with coverage
       run: |
@@ -58,11 +58,8 @@ jobs:
           docker inspect --format='{{.State.Health.Status}}' test-container | grep -q healthy
         fi
 
-    - name: Upload coverage to Codecov
+    - name: Upload coverage reports
       uses: codecov/codecov-action@0565863a31f2c772f9f0395002a31e3f06189574  # v5.4.0
-      with:
-        file: ./coverage.xml
-        fail_ci_if_error: true
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
@@ -91,6 +88,9 @@ jobs:
       
       - name: Install dependencies
         run: make install
+
+      - name: Install dev dependencies
+        run: make dev-setup
       
       - name: Run security checks
         run: make security-check

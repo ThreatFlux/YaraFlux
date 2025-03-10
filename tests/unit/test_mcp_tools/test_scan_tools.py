@@ -125,7 +125,7 @@ def test_scan_data_success_text(mock_yara_service):
     mock_result.file_name = "test.txt"
     mock_result.matches = []
     # Setup model_dump for matches if they exist
-    if hasattr(mock_result, 'matches') and mock_result.matches:
+    if hasattr(mock_result, "matches") and mock_result.matches:
         for match in mock_result.matches:
             match.model_dump = Mock(return_value={"rule": "test_rule"})
     # Mock the match_data method
@@ -150,7 +150,7 @@ def test_scan_data_success_base64(mock_yara_service):
     mock_result.file_name = "test.txt"
     mock_result.matches = []
     # Setup model_dump for matches if they exist
-    if hasattr(mock_result, 'matches') and mock_result.matches:
+    if hasattr(mock_result, "matches") and mock_result.matches:
         for match in mock_result.matches:
             match.model_dump = Mock(return_value={"rule": "test_rule"})
     # Mock the match_data method
@@ -177,7 +177,7 @@ def test_scan_data_with_rule_names(mock_yara_service):
     mock_result.file_name = "test.txt"
     mock_result.matches = []
     # Setup model_dump for matches if they exist
-    if hasattr(mock_result, 'matches') and mock_result.matches:
+    if hasattr(mock_result, "matches") and mock_result.matches:
         for match in mock_result.matches:
             match.model_dump = Mock(return_value={"rule": "test_rule"})
     # Mock the match_data method

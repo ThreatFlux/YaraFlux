@@ -2,7 +2,7 @@
 
 import json
 import os
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, PropertyMock, patch
 
@@ -97,14 +97,14 @@ def test_get_storage_info_local(mock_get_storage):
     assert "info" in result
     assert "storage_type" in result["info"]
     assert result["info"]["storage_type"] == "local"
-    
+
     # Verify local directories are included
     assert "local_directories" in result["info"]
     assert "rules" in result["info"]["local_directories"]
     assert result["info"]["local_directories"]["rules"] == str(Path("/tmp/yaraflux/rules"))
     assert "samples" in result["info"]["local_directories"]
     assert "results" in result["info"]["local_directories"]
-    
+
     # Verify usage statistics
     assert "usage" in result["info"]
     assert "rules" in result["info"]["usage"]
@@ -114,13 +114,13 @@ def test_get_storage_info_local(mock_get_storage):
     assert result["info"]["usage"]["samples"]["file_count"] == 2
     assert result["info"]["usage"]["samples"]["size_bytes"] == 12288
     assert "results" in result["info"]["usage"]
-    
+
     # Verify total size calculation
     assert "total" in result["info"]["usage"]
     total_size = (
-        result["info"]["usage"]["rules"]["size_bytes"] +
-        result["info"]["usage"]["samples"]["size_bytes"] +
-        result["info"]["usage"]["results"]["size_bytes"]
+        result["info"]["usage"]["rules"]["size_bytes"]
+        + result["info"]["usage"]["samples"]["size_bytes"]
+        + result["info"]["usage"]["results"]["size_bytes"]
     )
     assert result["info"]["usage"]["total"]["size_bytes"] == total_size
 
@@ -130,39 +130,37 @@ def test_get_storage_info_minio(mock_get_storage):
     """Test get_storage_info with MinIO storage."""
     # Create a mock storage client
     mock_storage = MagicMock()
-    
+
     # Setup class name for minio storage
     mock_storage.__class__.__name__ = "MinioStorageClient"
-    
+
     # Setup return values for the methods
-    mock_storage.list_rules.return_value = [
-        {"name": "rule1.yar", "size": 1024, "is_compiled": True}
-    ]
+    mock_storage.list_rules.return_value = [{"name": "rule1.yar", "size": 1024, "is_compiled": True}]
     mock_storage.list_files.return_value = {
         "files": [{"file_id": "1", "file_name": "sample1.bin", "file_size": 4096}],
-        "total": 1
+        "total": 1,
     }
-    
+
     # Make hasattr return False for directory attributes
     def hasattr_side_effect(obj, name):
         if name in ["rules_dir", "samples_dir", "results_dir"]:
             return False
         return True
-        
+
     with patch("yaraflux_mcp_server.mcp_tools.storage_tools.hasattr", side_effect=hasattr_side_effect):
         # Return our mock from get_storage_client
         mock_get_storage.return_value = mock_storage
-        
+
         # Call the function
         result = get_storage_info()
-        
+
         # Verify the result
         assert result["success"] is True
         assert result["info"]["storage_type"] == "minio"
-        
+
         # Verify directories are not included
         assert "local_directories" not in result["info"]
-    
+
     # Verify usage statistics
     assert "usage" in result["info"]
     assert "rules" in result["info"]["usage"]
@@ -192,7 +190,7 @@ def test_get_storage_info_rules_error(mock_get_storage):
 
     # Make list_rules raise an exception
     mock_storage.list_rules.side_effect = Exception("Rules listing error")
-    
+
     # Make other methods return valid data
     mock_storage.list_files.return_value = {
         "files": [{"file_id": "1", "file_name": "sample1.bin", "file_size": 4096}],
@@ -207,14 +205,14 @@ def test_get_storage_info_rules_error(mock_get_storage):
     # Verify the result still has success=True since the implementation handles errors
     assert result["success"] is True
     assert "info" in result
-    
+
     # Verify rules section shows zero values
     assert "usage" in result["info"]
     assert "rules" in result["info"]["usage"]
     assert result["info"]["usage"]["rules"]["file_count"] == 0
     assert result["info"]["usage"]["rules"]["size_bytes"] == 0
     assert result["info"]["usage"]["rules"]["size_human"] == "0.00 B"
-    
+
     # Verify other sections still have data
     assert "samples" in result["info"]["usage"]
     assert result["info"]["usage"]["samples"]["file_count"] == 1
@@ -240,7 +238,7 @@ def test_get_storage_info_samples_error(mock_get_storage):
     mock_storage.list_rules.return_value = [
         {"name": "rule1.yar", "size": 1024, "is_compiled": True},
     ]
-    
+
     # Make list_files raise an exception
     mock_storage.list_files.side_effect = Exception("Samples listing error")
 
@@ -252,13 +250,13 @@ def test_get_storage_info_samples_error(mock_get_storage):
     # Verify the result
     assert result["success"] is True
     assert "info" in result
-    
+
     # Verify rules section has data
     assert "usage" in result["info"]
     assert "rules" in result["info"]["usage"]
     assert result["info"]["usage"]["rules"]["file_count"] == 1
     assert result["info"]["usage"]["rules"]["size_bytes"] == 1024
-    
+
     # Verify samples section shows zero values
     assert "samples" in result["info"]["usage"]
     assert result["info"]["usage"]["samples"]["file_count"] == 0
@@ -288,12 +286,12 @@ def test_get_storage_info_results_detection(mock_getsize, mock_listdir, mock_exi
     # Setup basic data for rules and samples
     mock_storage.list_rules.return_value = [{"name": "rule1.yar", "size": 1024}]
     mock_storage.list_files.return_value = {"files": [], "total": 0}
-    
+
     # Setup results directory mocking
     mock_exists.return_value = True
     mock_listdir.return_value = ["result1.json", "result2.json"]
     mock_getsize.return_value = 2048  # Each file is 2KB
-    
+
     mock_get_storage.return_value = mock_storage
 
     # Call the function
@@ -301,7 +299,7 @@ def test_get_storage_info_results_detection(mock_getsize, mock_listdir, mock_exi
 
     # Verify the result
     assert result["success"] is True
-    
+
     # Verify results section has data
     assert "results" in result["info"]["usage"]
     assert result["info"]["usage"]["results"]["file_count"] == 2
@@ -316,31 +314,31 @@ def test_get_storage_info_results_error(mock_logger, mock_get_storage):
     # Create a mock storage client
     mock_storage = MagicMock()
     mock_storage.__class__.__name__ = "LocalStorageClient"
-    
+
     # Setup the error
     mock_storage.list_rules.return_value = []
     mock_storage.list_files.return_value = {"files": [], "total": 0}
-    
+
     # Create a property that raises an exception when accessed
     # We'll use property mocking to make results_dir raise an exception
     def side_effect_raise(*args, **kwargs):
         raise Exception("Results dir error")
-    
+
     # Configure the mock to raise an exception when results_dir is accessed
     mock_storage.results_dir = side_effect_raise
-    
+
     mock_get_storage.return_value = mock_storage
-    
+
     # Call the function
     result = get_storage_info()
-    
+
     # Because we're using a side_effect that raises an exception
     # we know the error should be logged
     assert mock_logger.warning.called or mock_logger.error.called
-    
+
     # Verify the function still returns success
     assert result["success"] is True
-    
+
     # Verify results section shows zero values
     assert "results" in result["info"]["usage"]
     assert result["info"]["usage"]["results"]["file_count"] == 0
@@ -368,7 +366,7 @@ def test_get_storage_info_total_calculation(mock_get_storage):
         {"name": "rule1.yar", "size": 1000},
         {"name": "rule2.yar", "size": 2000},
     ]
-    
+
     mock_storage.list_files.return_value = {
         "files": [
             {"file_id": "1", "file_name": "sample1.bin", "file_size": 3000},
@@ -376,16 +374,18 @@ def test_get_storage_info_total_calculation(mock_get_storage):
         ],
         "total": 2,
     }
-    
+
     # Setup results directory simulation with os module mocking
-    with patch("os.path.exists") as mock_exists, \
-         patch("os.listdir") as mock_listdir, \
-         patch("os.path.getsize") as mock_getsize:
-            
+    with (
+        patch("os.path.exists") as mock_exists,
+        patch("os.listdir") as mock_listdir,
+        patch("os.path.getsize") as mock_getsize,
+    ):
+
         mock_exists.return_value = True
         mock_listdir.return_value = ["result1.json", "result2.json"]
         mock_getsize.return_value = 5000  # Each file is 5KB
-        
+
         mock_get_storage.return_value = mock_storage
 
         # Call the function
@@ -403,14 +403,14 @@ def test_clean_storage_invalid_type(mock_get_storage):
     """Test clean_storage with invalid storage type."""
     # Setup a mock storage client (shouldn't be used)
     mock_get_storage.return_value = Mock()
-    
+
     # Call the function with an invalid storage type
     result = clean_storage(storage_type="invalid_type")
-    
+
     # Verify the result shows an error
     assert result["success"] is False
     assert "Invalid storage type" in result["message"]
-    
+
     # Verify the storage client was not used
     mock_get_storage.assert_not_called()
 
@@ -419,33 +419,33 @@ def test_clean_storage_invalid_type(mock_get_storage):
 def test_clean_storage_samples_only(mock_get_storage):
     """Test clean_storage with samples storage type."""
     mock_storage = Mock()
-    
+
     # Create sample data with different dates
     old_date = (datetime.now(UTC) - timedelta(days=40)).isoformat()
     new_date = (datetime.now(UTC) - timedelta(days=10)).isoformat()
-    
+
     # Setup list_files to return one old and one new file
     mock_storage.list_files.return_value = {
         "files": [
             {"file_id": "old", "file_name": "old_sample.bin", "file_size": 2048, "uploaded_at": old_date},
             {"file_id": "new", "file_name": "new_sample.bin", "file_size": 2048, "uploaded_at": new_date},
         ],
-        "total": 2
+        "total": 2,
     }
-    
+
     # Setup delete_file to return True (success)
     mock_storage.delete_file.return_value = True
-    
+
     mock_get_storage.return_value = mock_storage
-    
+
     # Call the function to clean files older than 30 days
     result = clean_storage(storage_type="samples", older_than_days=30)
-    
+
     # Verify the result
     assert result["success"] is True
     assert result["cleaned_count"] == 1  # Only old_sample.bin should be deleted
     assert result["freed_bytes"] == 2048  # 2KB freed
-    
+
     # Verify delete_file was called once with the old file ID
     mock_storage.delete_file.assert_called_once_with("old")
 
@@ -454,12 +454,12 @@ def test_clean_storage_samples_only(mock_get_storage):
 def test_clean_storage_custom_age(mock_get_storage):
     """Test clean_storage with custom age threshold."""
     mock_storage = Mock()
-    
+
     # Create sample data with different dates
     very_old_date = (datetime.now(UTC) - timedelta(days=100)).isoformat()
     old_date = (datetime.now(UTC) - timedelta(days=40)).isoformat()
     new_date = (datetime.now(UTC) - timedelta(days=10)).isoformat()
-    
+
     # Setup list_files to return files of various ages
     mock_storage.list_files.return_value = {
         "files": [
@@ -467,22 +467,22 @@ def test_clean_storage_custom_age(mock_get_storage):
             {"file_id": "old", "file_name": "old.bin", "file_size": 2000, "uploaded_at": old_date},
             {"file_id": "new", "file_name": "new.bin", "file_size": 3000, "uploaded_at": new_date},
         ],
-        "total": 3
+        "total": 3,
     }
-    
+
     # Setup delete_file to return True (success)
     mock_storage.delete_file.return_value = True
-    
+
     mock_get_storage.return_value = mock_storage
-    
+
     # Call the function to clean files older than 50 days
     result = clean_storage(storage_type="samples", older_than_days=50)
-    
+
     # Verify the result
     assert result["success"] is True
     assert result["cleaned_count"] == 1  # Only very_old.bin should be deleted
     assert result["freed_bytes"] == 1000
-    
+
     # Verify delete_file was called once with the very old file ID
     mock_storage.delete_file.assert_called_once_with("very_old")
 
@@ -491,33 +491,33 @@ def test_clean_storage_custom_age(mock_get_storage):
 def test_clean_storage_date_parsing(mock_get_storage):
     """Test clean_storage with different date formats."""
     mock_storage = Mock()
-    
+
     # Create sample data with different date formats
     iso_date = (datetime.now(UTC) - timedelta(days=40)).isoformat()
     datetime_obj = datetime.now(UTC) - timedelta(days=40)
-    
+
     # Setup list_files to return files with different date formats
     mock_storage.list_files.return_value = {
         "files": [
             {"file_id": "iso", "file_name": "iso_date.bin", "file_size": 1000, "uploaded_at": iso_date},
             {"file_id": "obj", "file_name": "datetime_obj.bin", "file_size": 2000, "uploaded_at": datetime_obj},
         ],
-        "total": 2
+        "total": 2,
     }
-    
+
     # Setup delete_file to return True (success)
     mock_storage.delete_file.return_value = True
-    
+
     mock_get_storage.return_value = mock_storage
-    
+
     # Call the function to clean files older than 30 days
     result = clean_storage(storage_type="samples", older_than_days=30)
-    
+
     # Verify the result
     assert result["success"] is True
     assert result["cleaned_count"] == 2  # Both files should be deleted
     assert result["freed_bytes"] == 3000  # 1000 + 2000
-    
+
     # Verify delete_file was called twice
     assert mock_storage.delete_file.call_count == 2
 
@@ -526,31 +526,32 @@ def test_clean_storage_date_parsing(mock_get_storage):
 def test_clean_storage_missing_date(mock_get_storage):
     """Test clean_storage with files missing date information."""
     mock_storage = Mock()
-    
+
     # Create sample data with missing date field
     mock_storage.list_files.return_value = {
         "files": [
             {"file_id": "no_date", "file_name": "no_date.bin", "file_size": 1000},  # No uploaded_at field
             {"file_id": "date_none", "file_name": "date_none.bin", "file_size": 2000, "uploaded_at": None},
         ],
-        "total": 2
+        "total": 2,
     }
-    
+
     # Setup delete_file to return True (success)
     mock_storage.delete_file.return_value = True
-    
+
     mock_get_storage.return_value = mock_storage
-    
+
     # Call the function to clean files (these should be kept since we can't determine age)
     result = clean_storage(storage_type="samples", older_than_days=30)
-    
+
     # Verify the result - files with missing dates should be preserved
     assert result["success"] is True
     assert result["cleaned_count"] == 0  # No files should be deleted
     assert result["freed_bytes"] == 0
-    
+
     # Verify delete_file was not called
     mock_storage.delete_file.assert_not_called()
+
 
 # Removing the failing tests:
 # - test_clean_storage_results_only

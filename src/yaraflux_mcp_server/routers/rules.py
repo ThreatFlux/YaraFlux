@@ -5,7 +5,7 @@ adding, updating, and deleting rules.
 """
 
 import logging
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import List, Optional
 
 from fastapi import (

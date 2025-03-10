@@ -6,7 +6,7 @@ error handling.
 """
 
 import logging
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from typing import Any, Dict, Optional
 
 from yaraflux_mcp_server.mcp_tools.base import register_tool

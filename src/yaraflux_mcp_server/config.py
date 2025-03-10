@@ -5,10 +5,10 @@ for the YaraFlux MCP Server, including JWT auth, storage options, and YARA setti
 """
 
 import os
+from datetime import UTC
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from datetime import UTC
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
@@ -67,7 +67,7 @@ class Settings(BaseSettings):
         """Validate MinIO settings if USE_MINIO is True."""
         field_name = info.field_name
         data = info.data
-        
+
         # Skip validation if we can't determine the field name
         if field_name is None:
             return v

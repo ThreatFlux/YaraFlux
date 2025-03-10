@@ -25,33 +25,33 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """
     Lifespan context manager for FastAPI application.
-    
+
     This replaces the deprecated @app.on_event handlers and manages the application lifecycle.
     """
     # ===== Startup operations =====
     logger.info("Starting YaraFlux MCP Server")
-    
+
     # Ensure directories exist
     ensure_directories_exist()
     logger.info("Directory structure verified")
-    
+
     # Initialize user database
     try:
         init_user_db()
         logger.info("User database initialized")
     except Exception as e:
         logger.error(f"Error initializing user database: {str(e)}")
-    
+
     # Load YARA rules
     try:
         yara_service.load_rules(include_default_rules=settings.YARA_INCLUDE_DEFAULT_RULES)
         logger.info("YARA rules loaded")
     except Exception as e:
         logger.error(f"Error loading YARA rules: {str(e)}")
-    
+
     # Yield control back to the application
     yield
-    
+
     # ===== Shutdown operations =====
     logger.info("Shutting down YaraFlux MCP Server")
 
