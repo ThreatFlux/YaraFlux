@@ -117,7 +117,7 @@ dev-setup: install
 	@echo "Installing development dependencies..."
 	$(UV) pip install -e ".[dev]"
 	@echo "Ensuring PyJWT is installed..."
-	$(UV) pip install PyJWT
+	$(UV) pip install PyJWT coverage
 	$(UV) run pre-commit install
 	@echo "Development setup complete."
 
