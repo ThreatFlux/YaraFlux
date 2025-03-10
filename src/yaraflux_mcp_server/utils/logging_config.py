@@ -9,6 +9,7 @@ import logging
 import logging.config
 import os
 import sys
+import threading  # Import threading at module level
 import traceback
 import uuid
 from datetime import datetime
@@ -239,9 +240,8 @@ def configure_logging(
         max_bytes: Maximum size of log file before rotation
         backup_count: Number of backup files to keep
     """
-    # Import threading here to avoid circular imports
-    import threading
-
+    # Threading is now imported at module level
+    
     # Create handlers
     handlers = {}
 

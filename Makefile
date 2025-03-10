@@ -156,9 +156,10 @@ coverage:
 	@echo "Generating coverage report..."
 	rm -f .coverage htmlcov/* || true
 	# Use the .coveragerc file directly instead of command-line args
-	$(UV) run python -m pytest tests/
+	$(UV) run pytest -v tests/
 	$(UV) run coverage report
 	$(UV) run coverage html
+	$(UV) run coverage xml
 	@echo "Coverage report generated in htmlcov/"
 
 # Code quality

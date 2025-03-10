@@ -553,6 +553,142 @@ def test_clean_storage_missing_date(mock_get_storage):
     mock_storage.delete_file.assert_not_called()
 
 
-# Removing the failing tests:
-# - test_clean_storage_results_only
-# - test_clean_storage_all_types
+@patch("yaraflux_mcp_server.mcp_tools.storage_tools.get_storage_client")
+@patch("os.path.exists")
+@patch("os.listdir")
+@patch("os.path.getmtime")
+@patch("os.path.getsize")
+@patch("os.remove")
+def test_clean_storage_results_only(mock_remove, mock_getsize, mock_getmtime, mock_listdir, mock_exists, mock_get_storage):
+    """Test clean_storage with results storage type."""
+    mock_storage = Mock()
+    mock_storage.__class__.__name__ = "LocalStorageClient"
+
+    # Setup a Path mock that includes an exists method
+    results_dir = MagicMock(spec=Path)
+    results_dir.exists.return_value = True
+    results_dir.glob.return_value = [
+        Path("/tmp/yaraflux/results/old_result.json"),
+        Path("/tmp/yaraflux/results/new_result.json"),
+    ]
+
+    # Setup the mock storage client
+    results_dir_mock = PropertyMock(return_value=results_dir)
+    type(mock_storage).results_dir = results_dir_mock
+
+    # Setup the results directory existence
+    mock_exists.return_value = True
+
+    # Create test files list with different timestamps
+    old_file = "old_result.json"
+    new_file = "new_result.json"
+    mock_listdir.return_value = [old_file, new_file]
+
+    # Set file modification times
+    def getmtime_side_effect(path):
+            if old_file in str(path):
+                # 40 days ago - use naive datetime for timestamp
+                return (datetime.now() - timedelta(days=40)).timestamp()
+            else:
+                # 10 days ago - use naive datetime for timestamp
+                return (datetime.now() - timedelta(days=10)).timestamp()
+
+    mock_getmtime.side_effect = getmtime_side_effect
+
+    # Set file sizes
+    mock_getsize.return_value = 5000  # Each file is 5KB
+
+    # Setup delete_file to succeed
+    mock_remove.return_value = None  # os.remove returns None on success
+
+    mock_get_storage.return_value = mock_storage
+
+    # Call the function to clean results older than 30 days
+    result = clean_storage(storage_type="results", older_than_days=30)
+
+    # Verify the result
+    assert result["success"] is True
+    assert result["cleaned_count"] == 1  # Only old_result.json should be deleted
+    assert result["freed_bytes"] == 5000  # 5KB freed
+
+    # Verify os.remove was called once with the old file path
+    mock_remove.assert_called_once()
+
+
+@patch("yaraflux_mcp_server.mcp_tools.storage_tools.get_storage_client")
+@patch("os.path.exists")
+@patch("os.listdir")
+@patch("os.path.getmtime")
+@patch("os.path.getsize")
+@patch("os.remove")
+def test_clean_storage_all_types(
+    mock_remove, mock_getsize, mock_getmtime, mock_listdir, mock_exists, mock_get_storage
+):
+    """Test clean_storage with 'all' storage type."""
+    mock_storage = Mock()
+    mock_storage.__class__.__name__ = "LocalStorageClient"
+
+    # Setup a Path mock that includes an exists method
+    results_dir = MagicMock(spec=Path)
+    results_dir.exists.return_value = True
+    results_dir.glob.return_value = [
+        Path("/tmp/yaraflux/results/old_result.json"),
+        Path("/tmp/yaraflux/results/new_result.json"),
+    ]
+
+    # Setup the mock storage client
+    results_dir_mock = PropertyMock(return_value=results_dir)
+    type(mock_storage).results_dir = results_dir_mock
+
+    # Setup the results directory existence
+    mock_exists.return_value = True
+
+    # Setup results files
+    mock_listdir.return_value = ["old_result.json", "new_result.json"]
+
+    # Set file modification times for results
+    def getmtime_side_effect(path):
+        if "old_result.json" in str(path):
+            # 40 days ago - use naive datetime for timestamp
+            return (datetime.now() - timedelta(days=40)).timestamp()
+        else:
+            # 10 days ago - use naive datetime for timestamp
+            return (datetime.now() - timedelta(days=10)).timestamp()
+
+    mock_getmtime.side_effect = getmtime_side_effect
+
+    # Set file sizes for results
+    mock_getsize.return_value = 5000  # Each file is 5KB
+
+    # Setup sample files
+    old_date = (datetime.now(UTC) - timedelta(days=40)).isoformat()
+    new_date = (datetime.now(UTC) - timedelta(days=10)).isoformat()
+
+    mock_storage.list_files.return_value = {
+        "files": [
+            {"file_id": "old", "file_name": "old_sample.bin", "file_size": 3000, "uploaded_at": old_date},
+            {"file_id": "new", "file_name": "new_sample.bin", "file_size": 3000, "uploaded_at": new_date},
+        ],
+        "total": 2,
+    }
+
+    # Setup delete_file to return True (success)
+    mock_storage.delete_file.return_value = True
+
+    mock_get_storage.return_value = mock_storage
+
+    # Call the function to clean all storage types older than 30 days
+    result = clean_storage(storage_type="all", older_than_days=30)
+
+    # Verify the result
+    assert result["success"] is True
+    assert result["cleaned_count"] == 2  # 1 old result + 1 old sample
+    assert result["freed_bytes"] == 8000  # 5000 (result) + 3000 (sample)
+
+    # Verify os.remove was called for the old result
+    mock_remove.assert_called_once()
+    args, _ = mock_remove.call_args
+    assert "old_result.json" in str(args[0])
+
+    # Verify delete_file was called for the old sample
+    mock_storage.delete_file.assert_called_once_with("old")

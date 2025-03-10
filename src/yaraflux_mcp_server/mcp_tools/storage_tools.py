@@ -171,8 +171,8 @@ def clean_storage(storage_type: str, older_than_days: Optional[int] = None) -> D
                     results_path = storage.results_dir
                     for file_path in results_path.glob("*.json"):
                         try:
-                            # Check file modification time
-                            mtime = datetime.fromtimestamp(os.path.getmtime(file_path))
+                            # Check file modification time (make timezone-aware)
+                            mtime = datetime.fromtimestamp(os.path.getmtime(file_path), tz=UTC)
                             if mtime < cutoff_date:
                                 # Check file size before deleting
                                 file_size = os.path.getsize(file_path)

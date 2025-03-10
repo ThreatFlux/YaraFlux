@@ -1,4 +1,4 @@
-name: Example workflow for Python using Safety Action
+name:  Workflow for Safety Action
 on: push
 jobs:
   security:
