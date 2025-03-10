@@ -38,11 +38,9 @@ jobs:
     - name: Run linting
       run: make lint
 
-    - name: Run tests with coverage
+    - name: Run coverage
       run: |
-        make test
         make coverage
-        coverage xml
 
     - name: Build Docker stage
       run: |
