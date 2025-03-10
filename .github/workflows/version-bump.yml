@@ -29,55 +29,45 @@ jobs:
     - name: Get current version
       id: current_version
       run: |
-        # Try pyproject.toml first
-        if [ -f "pyproject.toml" ]; then
-          VERSION=$(grep -oP '(?<=version = ")[^"]*' pyproject.toml)
-        else
-          # Fallback to setup.py
-          VERSION=$(grep -oP '(?<=version=")[^"]*' setup.py)
+        # Check if make is available
+        if ! command -v make &> /dev/null
+        then
+            echo "Make could not be found, installing..."
+            sudo apt-get update
+            sudo apt-get install make
         fi
-        echo "Current version: $VERSION"
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-    - name: Increment version
-      id: increment_version
-      run: |
-        # Parse version components
-        IFS='.' read -r -a version_parts <<< "${{ steps.current_version.outputs.version }}"
-        MAJOR="${version_parts[0]}"
-        MINOR="${version_parts[1]}"
-        PATCH="${version_parts[2]}"
+        # Use Makefile to get the current version
+        echo "Getting current version information..."
+        make get-version
         
-        # Increment patch version
-        NEW_PATCH=$((PATCH + 1))
+        # Extract version from __init__.py (same as Makefile does)
+        VERSION=$(cat src/yaraflux_mcp_server/__init__.py | grep __version__ | sed -e "s/__version__ = \"\(.*\)\"/\1/")
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        
+        # Calculate new version using the same logic as Makefile
+        MAJOR=$(echo $VERSION | cut -d. -f1)
+        MINOR=$(echo $VERSION | cut -d. -f2)
+        PATCH=$(echo $VERSION | cut -d. -f3)
+        NEW_PATCH=$(expr $PATCH + 1)
         NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
-        echo "New version: $NEW_VERSION"
         echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
-        # Update version in files
-        if [ -f "pyproject.toml" ]; then
-          sed -i "s/version = \"${{ steps.current_version.outputs.version }}\"/version = \"$NEW_VERSION\"/" pyproject.toml
-        fi
-        if [ -f "setup.py" ]; then
-          sed -i "s/version=\"${{ steps.current_version.outputs.version }}\"/version=\"$NEW_VERSION\"/" setup.py
-        fi
-        if [ -f "src/yaraflux_mcp_server/__init__.py" ]; then
-          sed -i "s/__version__ = \"${{ steps.current_version.outputs.version }}\"/__version__ = \"$NEW_VERSION\"/" src/yaraflux_mcp_server/__init__.py
-        fi
-
-    - name: Update Docker labels
+    - name: Bump version
       run: |
-        if [ -f "Dockerfile" ]; then
-          sed -i "s/version=\".*\"/version=\"${{ steps.increment_version.outputs.new_version }}\"/" Dockerfile
-        fi
+        echo "Bumping version from ${{ steps.current_version.outputs.version }} to ${{ steps.current_version.outputs.new_version }}..."
+        make bump-version
+        
+        # Verify the version was updated correctly
+        echo "Verifying version update..."
+        make get-version
 
     - name: Create version bump commit
       run: |
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
         git add pyproject.toml setup.py Dockerfile src/yaraflux_mcp_server/__init__.py
-        git commit -m "chore: bump version to ${{ steps.increment_version.outputs.new_version }}"
-        git tag -a "v${{ steps.increment_version.outputs.new_version }}" -m "Version ${{ steps.increment_version.outputs.new_version }}"
+        git commit -m "chore: bump version to ${{ steps.current_version.outputs.new_version }}"
+        git tag -a "v${{ steps.current_version.outputs.new_version }}" -m "Version ${{ steps.current_version.outputs.new_version }}"
 
     - name: Push changes
       uses: ad-m/github-push-action@master
@@ -87,4 +77,4 @@ jobs:
         tags: true
 
     outputs:
-      new_version: ${{ steps.increment_version.outputs.new_version }}
+      new_version: ${{ steps.current_version.outputs.new_version }}

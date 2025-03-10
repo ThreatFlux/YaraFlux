@@ -1,4 +1,4 @@
-.PHONY: all clean install dev-setup test lint format docker-build docker-run docker-test mypy security-check coverage run import-rules lock sync check-deps
+.PHONY: all clean install dev-setup test lint format docker-build docker-run docker-test mypy security-check coverage run import-rules lock sync check-deps get-version bump-version
 
 # Default target
 all: clean install test lint
@@ -14,6 +14,14 @@ VERSION = $(shell cat src/yaraflux_mcp_server/__init__.py | grep __version__ | s
 DOCKER_TAG = $(IMAGE_NAME):$(VERSION)
 CONTAINER_NAME = yaraflux-mcp-test-container
 HEALTH_CHECK_TIMEOUT = 30
+
+# Version management
+VERSION = $(shell cat src/yaraflux_mcp_server/__init__.py | grep __version__ | sed -e "s/__version__ = \"\(.*\)\"/\1/")
+MAJOR = $(shell echo $(VERSION) | cut -d. -f1)
+MINOR = $(shell echo $(VERSION) | cut -d. -f2)
+PATCH = $(shell echo $(VERSION) | cut -d. -f3)
+NEW_PATCH = $(shell expr $(PATCH) + 1)
+NEW_VERSION = $(MAJOR).$(MINOR).$(NEW_PATCH)
 
 # System detection
 OS = $(shell uname -s)
@@ -104,7 +112,7 @@ install: check-deps
 		fi; \
 	fi
 	$(UV) venv --python $(PYTHON_VERSION)
-	
+
 	# Set environment variables for compilation if needed
 	@if [ "$(OS)" = "Darwin" ] && brew --prefix openssl >/dev/null 2>&1; then \
 		OPENSSL_DIR=$$(brew --prefix openssl) \
@@ -203,16 +211,16 @@ docker-test:
 	@echo "Stopping and removing any existing test container..."
 	docker stop $(CONTAINER_NAME) >/dev/null 2>&1 || true
 	docker rm $(CONTAINER_NAME) >/dev/null 2>&1 || true
-	
+
 	@echo "Starting test container in detached mode..."
 	docker run -d --name $(CONTAINER_NAME) \
 		-e JWT_SECRET_KEY=test_jwt_key \
 		-e ADMIN_PASSWORD=test_admin_password \
 		$(DOCKER_TAG)
-	
+
 	@echo "Waiting $(HEALTH_CHECK_TIMEOUT) seconds for container to initialize..."
 	sleep $(HEALTH_CHECK_TIMEOUT)
-	
+
 	@echo "Checking container health status..."
 	@if docker inspect --format='{{.State.Health.Status}}' $(CONTAINER_NAME) 2>/dev/null | grep -q healthy; then \
 		echo "✅ Container health check passed: Status is healthy"; \
@@ -247,11 +255,11 @@ docker-test:
 			exit 1; \
 		fi; \
 	fi
-	
+
 	@echo "Stopping and removing test container..."
 	docker stop $(CONTAINER_NAME)
 	docker rm $(CONTAINER_NAME)
-	
+
 	@echo "✅ Docker test completed successfully"
 
 # Development
@@ -263,6 +271,45 @@ import-rules:
 	@echo "Importing ThreatFlux YARA rules..."
 	$(UV) run python -m yaraflux_mcp_server import-rules
 	@echo "Rules import complete."
+
+# Version management commands
+get-version:
+	@echo "Current version from __init__.py: $(VERSION)"
+	@echo "Version components: MAJOR=$(MAJOR), MINOR=$(MINOR), PATCH=$(PATCH)"
+	@echo "New patch version: $(NEW_PATCH)"
+
+	@if [ -f "pyproject.toml" ]; then \
+		TOML_VERSION=$$(awk '/^\[project\]/,/^\[/ {if($$1=="version" && $$2=="=") {gsub(/"/, "", $$3); print $$3; exit}}' pyproject.toml); \
+		echo "Version in pyproject.toml: $$TOML_VERSION"; \
+	else \
+		echo "pyproject.toml not found"; \
+	fi
+
+	@echo "Next version will be: $(NEW_VERSION)"
+
+bump-version:
+	@echo "Bumping version from $(VERSION) to $(NEW_VERSION)"
+
+	@if [ -f "pyproject.toml" ]; then \
+		sed -i.bak '/^\[project\]/,/^[[]/ s/^version = "[0-9]*\.[0-9]*\.[0-9]*"/version = "$(NEW_VERSION)"/' pyproject.toml && rm -f pyproject.toml.bak; \
+		echo "Updated pyproject.toml"; \
+	fi
+
+	@if [ -f "src/yaraflux_mcp_server/__init__.py" ]; then \
+		sed -i.bak 's/__version__ = "[0-9]*\.[0-9]*\.[0-9]*"/__version__ = "$(NEW_VERSION)"/' src/yaraflux_mcp_server/__init__.py && rm -f src/yaraflux_mcp_server/__init__.py.bak; \
+		echo "Updated __init__.py"; \
+	fi
+
+	@if [ -f "Dockerfile" ]; then \
+		sed -i.bak 's/version="[0-9]*\.[0-9]*\.[0-9]*"/version="$(NEW_VERSION)"/' Dockerfile && rm -f Dockerfile.bak; \
+		echo "Updated Dockerfile"; \
+	fi
+
+	@echo "Version bump complete. New version: $(NEW_VERSION)"
+	@echo "To commit this change, run:"
+	@echo "  git add pyproject.toml src/yaraflux_mcp_server/__init__.py Dockerfile"
+	@echo "  git commit -m \"chore: bump version to $(NEW_VERSION)\""
+	@echo "  git tag -a \"v$(NEW_VERSION)\" -m \"Version $(NEW_VERSION)\""
 
 help:
 	@echo "YaraFlux MCP Server Makefile"
@@ -286,4 +333,6 @@ help:
 	@echo " docker-test : Test Docker container health status"
 	@echo " run : Run development server"
 	@echo " import-rules : Import ThreatFlux YARA rules"
+	@echo " get-version : Display current and next version numbers"
+	@echo " bump-version : Bump patch version in all relevant files"
 	@echo ""
