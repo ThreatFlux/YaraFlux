@@ -1,0 +1,11 @@
+name: Example workflow for Python using Safety Action
+on: push
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Run Safety CLI to check for vulnerabilities
+        uses: pyupio/safety-action@2591cf2f3e67ba68b923f4c92f0d36e281c65023  # v1.0.1
+        with:
+          api-key: ${{ secrets.SAFETY_API_KEY }}

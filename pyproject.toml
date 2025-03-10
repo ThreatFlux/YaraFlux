@@ -8,16 +8,14 @@ version = "1.0.0"
 description = "Model Context Protocol (MCP) server for YARA scanning"
 readme = "README.md"
 authors = [
-    {name = "ThreatFlux", email = "info@threatflux.com"}
+    {name = "ThreatFlux", email = "wyatt@threatflux.ai", role = "author"},
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.13"
 ]
 requires-python = ">=3.13"
 dependencies = [
@@ -63,7 +61,7 @@ packages = ["yaraflux_mcp_server", "yaraflux_mcp_server.routers"]
 
 [tool.black]
 line-length = 120
-target-version = ["py311", "py312", "py313"]
+target-version = ["py313"]
 include = '\.pyi?$'
 
 [tool.isort]

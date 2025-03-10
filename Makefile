@@ -171,7 +171,6 @@ mypy:
 security-check:
 	@echo "Running security checks..."
 	$(UV) run bandit -r src/yaraflux_mcp_server -c bandit.yaml
-	$(UV) run safety scan
 	@echo "Security checks complete."
 
 # Cleaning
