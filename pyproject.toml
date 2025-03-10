@@ -8,7 +8,7 @@ version = "1.0.0"
 description = "Model Context Protocol (MCP) server for YARA scanning"
 readme = "README.md"
 authors = [
-    {name = "ThreatFlux", email = "wyatt@threatflux.ai", role = "author"},
+    {name = "ThreatFlux", email = "wyatt@threatflux.ai"},
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -45,7 +45,9 @@ dev = [
     "mypy>=1.8.0",
     "bandit>=1.7.0",
     "safety>=3.0.0",
+    "coverage>=7.6.12",
     "pre-commit>=3.6.0",
+    "wheel>=0.45.0",
 ]
 
 [project.urls]
