@@ -8,6 +8,7 @@ implementations with inline error handling.
 import logging
 import os
 import tempfile
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -126,16 +127,18 @@ def validate_yara_rule(content: str) -> Dict[str, Any]:
             raise ValueError("Rule content cannot be empty")
 
         try:
-            # Try to directly validate using YARA
-            import yara  # noqa: F401
+            # Create a temporary rule name for validation
+            temp_rule_name = f"validate_{int(datetime.utcnow().timestamp())}.yar"
 
-            # This will compile the rule but not save it
-            yara.compile(source=content)
+            # Attempt to add the rule (this will validate it)
+            yara_service.add_rule(temp_rule_name, content)
 
-            # If we reach here, the rule is valid
+            # Rule is valid, delete it
+            yara_service.delete_rule(temp_rule_name)
+
             return {"valid": True, "message": "Rule is valid"}
 
-        except Exception as e:
+        except YaraError as e:
             # Capture the original compilation error
             error_message = str(e)
             logger.debug(f"YARA compilation error: {error_message}")

@@ -1,9 +1,9 @@
 # YaraFlux MCP Server
-
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/ThreatFlux/YaraFlux)](https://github.com/ThreatFlux/YaraFlux/releases)
 [![CI](https://github.com/ThreatFlux/YaraFlux/workflows/CI/badge.svg)](https://github.com/ThreatFlux/YaraFlux/actions)
 [![codecov](https://codecov.io/gh/ThreatFlux/YaraFlux/branch/main/graph/badge.svg)](https://codecov.io/gh/ThreatFlux/YaraFlux)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/8f7728ae613540938411196abe4359f6)](https://app.codacy.com/gh/ThreatFlux/YaraFlux/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
-[![GitHub License](https://img.shields.io/github/license/ThreatFlux/YaraFlux)](https://github.com/ThreatFlux/YaraFlux/blob/main/LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python Version](https://img.shields.io/badge/python-3.13-blue)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104.1-009688)](https://fastapi.tiangolo.com/)
 [![MCP](https://img.shields.io/badge/MCP-Integrated-blueviolet)](https://docs.anthropic.com/claude/docs/model-context-protocol)
