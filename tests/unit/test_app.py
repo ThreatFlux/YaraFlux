@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 from yaraflux_mcp_server.app import app, create_app, ensure_directories_exist, lifespan
 
 
-def test_ensure_directories_exist():
+def test_ensure_directories_exist() -> None:
     """Test directory creation function."""
     with (
         patch("os.makedirs") as mock_makedirs,
@@ -45,7 +45,7 @@ def test_ensure_directories_exist():
 
 
 @pytest.mark.asyncio
-async def test_lifespan_normal():
+async def test_lifespan_normal() -> None:
     """Test lifespan context manager under normal conditions."""
     app_mock = MagicMock()
 
@@ -79,7 +79,7 @@ async def test_lifespan_normal():
 
 
 @pytest.mark.asyncio
-async def test_lifespan_errors():
+async def test_lifespan_errors() -> None:
     """Test lifespan context manager with errors."""
     app_mock = MagicMock()
 
@@ -106,7 +106,7 @@ async def test_lifespan_errors():
             mock_logger.error.assert_any_call("Error loading YARA rules: YARA rules loading error")
 
 
-def test_create_app():
+def test_create_app() -> None:
     """Test FastAPI application creation."""
     with (
         patch("yaraflux_mcp_server.app.FastAPI") as mock_fastapi,
@@ -140,7 +140,7 @@ def test_create_app():
         assert result == mock_app
 
 
-def test_health_check():
+def test_health_check() -> None:
     """Test health check endpoint."""
     # Create a TestClient with the real app
     client = TestClient(app)
@@ -153,7 +153,7 @@ def test_health_check():
     assert response.json() == {"status": "healthy"}
 
 
-def test_router_initialization():
+def test_router_initialization() -> None:
     """Test API router initialization."""
     with (
         patch("yaraflux_mcp_server.app.FastAPI") as mock_fastapi,
@@ -184,7 +184,7 @@ def test_router_initialization():
         mock_logger.info.assert_any_call("API routers initialized")
 
 
-def test_router_initialization_error():
+def test_router_initialization_error() -> None:
     """Test API router initialization with error."""
     with (
         patch("yaraflux_mcp_server.app.FastAPI") as mock_fastapi,

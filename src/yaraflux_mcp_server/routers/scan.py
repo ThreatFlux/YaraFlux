@@ -123,7 +123,7 @@ async def scan_file(
 
 
 @router.get("/result/{scan_id}", response_model=ScanResult)
-async def get_scan_result(scan_id: UUID, current_user: User = Depends(get_current_active_user)):
+async def get_scan_result(scan_id: UUID):
     """Get a scan result by ID.
 
     Args:

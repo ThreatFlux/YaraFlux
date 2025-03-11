@@ -38,9 +38,5 @@ def init_fastapi(app: FastAPI) -> FastAPI:
 
 
 # Ensure everything from mcp_tools is initialized
-import yaraflux_mcp_server.mcp_tools.file_tools
-import yaraflux_mcp_server.mcp_tools.rule_tools
-import yaraflux_mcp_server.mcp_tools.scan_tools
-import yaraflux_mcp_server.mcp_tools.storage_tools
 
 logger.info("Claude MCP initialized with modular tools package")

@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 
-def setup_environment():
+def setup_environment() -> None:
     """Set up the environment for the MCP server."""
     # Ensure required directories exist
     os.makedirs(settings.STORAGE_DIR, exist_ok=True)
@@ -43,7 +43,7 @@ def setup_environment():
         logger.error(f"Error loading YARA rules: {str(e)}")
 
 
-def main():
+def main() -> None:
     """Main entry point for running the MCP server."""
     logger.info("Starting YaraFlux MCP Server")
 

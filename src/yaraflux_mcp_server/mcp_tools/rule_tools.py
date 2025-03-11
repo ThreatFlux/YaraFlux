@@ -8,7 +8,7 @@ implementations with inline error handling.
 import logging
 import os
 import tempfile
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -128,7 +128,7 @@ def validate_yara_rule(content: str) -> Dict[str, Any]:
 
         try:
             # Create a temporary rule name for validation
-            temp_rule_name = f"validate_{int(datetime.utcnow().timestamp())}.yar"
+            temp_rule_name = f"validate_{int(datetime.now(UTC).timestamp())}.yar"
 
             # Attempt to add the rule (this will validate it)
             yara_service.add_rule(temp_rule_name, content)
@@ -274,8 +274,7 @@ def delete_yara_rule(name: str, source: str = "custom") -> Dict[str, Any]:
 
         if result:
             return {"success": True, "message": f"Rule {name} deleted successfully"}
-        else:
-            return {"success": False, "message": f"Rule {name} not found"}
+        return {"success": False, "message": f"Rule {name} not found"}
     except YaraError as e:
         logger.error(f"YARA error in delete_yara_rule: {str(e)}")
         return {"success": False, "message": str(e)}

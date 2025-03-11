@@ -9,7 +9,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, ByteSize, Field, HttpUrl, field_validator
+from pydantic import BaseModel, Field, HttpUrl, field_validator
 
 
 class UserRole(str, Enum):

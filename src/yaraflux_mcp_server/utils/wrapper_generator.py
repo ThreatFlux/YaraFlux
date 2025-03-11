@@ -91,7 +91,7 @@ def create_tool_wrapper(
             result = actual_func(**extracted_params)
 
             # Return the result
-            return result
+            return result if result is not None else {}
         except Exception as e:
             # Handle error
             return handle_tool_error(func_name, e)
@@ -254,7 +254,7 @@ def register_tool_with_schema(
             result = actual_func(**parsed_params)
 
             # Return the result
-            return result
+            return result if result is not None else {}
         except Exception as e:
             # Handle error
             return handle_tool_error(func_name, e)

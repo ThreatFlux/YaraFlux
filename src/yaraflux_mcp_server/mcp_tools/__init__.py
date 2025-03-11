@@ -17,7 +17,7 @@ from .base import ToolRegistry, register_tool
 logger = logging.getLogger(__name__)
 
 
-def init_fastapi(app: FastAPI) -> FastAPI:
+def init_fastapi(app: FastAPI) -> None:
     """Initialize FastAPI with MCP endpoints.
 
     This function sets up the necessary endpoints for MCP tool discovery

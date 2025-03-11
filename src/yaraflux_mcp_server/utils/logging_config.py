@@ -10,12 +10,11 @@ import logging.config
 import os
 import sys
 import threading  # Import threading at module level
-import traceback
 import uuid
 from datetime import datetime
 from functools import wraps
-from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
-from typing import Any, Callable, Dict, Optional, Type, TypeVar, cast
+from logging.handlers import RotatingFileHandler
+from typing import Any, Callable, Dict, Optional, TypeVar, cast
 
 # Define a context variable for request IDs
 REQUEST_ID_CONTEXT: Dict[int, str] = {}

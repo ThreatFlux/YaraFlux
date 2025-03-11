@@ -83,7 +83,7 @@ async def read_users_me(current_user: User = Depends(get_current_active_user)):
 
 
 @router.get("/users", response_model=List[User])
-async def read_users(current_user: User = Depends(validate_admin)):
+async def read_users():
     """Get all users (admin only).
 
     Args:

@@ -26,6 +26,9 @@ async def lifespan(app: FastAPI):
     """
     Lifespan context manager for FastAPI application.
 
+    Args:
+        app: The FastAPI application instance
+
     This replaces the deprecated @app.on_event handlers and manages the application lifecycle.
     """
     # ===== Startup operations =====
@@ -97,7 +100,7 @@ def create_app() -> FastAPI:
 
     # Add exception handler for YaraError
     @app.exception_handler(Exception)
-    async def generic_exception_handler(request: Request, exc: Exception):
+    async def generic_exception_handler(exc: Exception):
         """Handle generic exceptions."""
         logger.error(f"Unhandled exception: {str(exc)}")
         return JSONResponse(

@@ -13,11 +13,10 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from pydantic import ValidationError
 
 from yaraflux_mcp_server.config import settings
 from yaraflux_mcp_server.models import TokenData, User, UserInDB, UserRole
-from yaraflux_mcp_server.storage.base import StorageClient, StorageError
+from yaraflux_mcp_server.storage.base import StorageClient
 
 # Configuration constants
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
@@ -159,7 +158,7 @@ def decode_token(token: str) -> TokenData:
         )
 
 
-def refresh_access_token(refresh_token: str, storage: Optional[StorageClient] = None) -> str:
+def refresh_access_token(refresh_token: str) -> str:
     """Create a new access token using a refresh token."""
     try:
         payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGORITHM])

@@ -21,9 +21,8 @@ from yaraflux_mcp_server.models import (
     FileListResponse,
     FileStringsRequest,
     FileStringsResponse,
-    FileUploadRequest,
     FileUploadResponse,
-    User,
+    User, FileString,
 )
 from yaraflux_mcp_server.storage import StorageError, get_storage_client
 
@@ -95,7 +94,7 @@ async def upload_file(
 
 
 @router.get("/info/{file_id}", response_model=FileInfo)
-async def get_file_info(file_id: UUID, current_user: User = Depends(get_current_active_user)):
+async def get_file_info(file_id: UUID):
     """Get detailed information about a file."""
     try:
         storage = get_storage_client()
@@ -128,7 +127,6 @@ async def get_file_info(file_id: UUID, current_user: User = Depends(get_current_
 async def download_file(
     file_id: UUID,
     as_text: bool = Query(False, description="Return as text if possible"),
-    current_user: User = Depends(get_current_active_user),
 ):
     """Download a file's content."""
     try:
@@ -173,7 +171,6 @@ async def list_files(
     page_size: int = Query(100, ge=1, le=1000, description="Items per page"),
     sort_by: str = Query("uploaded_at", description="Field to sort by"),
     sort_desc: bool = Query(True, description="Sort in descending order"),
-    current_user: User = Depends(get_current_active_user),
 ):
     """List files with pagination and sorting."""
     try:
@@ -210,7 +207,10 @@ async def list_files(
 
 
 @router.delete("/{file_id}", response_model=FileDeleteResponse)
-async def delete_file(file_id: UUID, current_user: User = Depends(validate_admin)):  # Only admins can delete
+async def delete_file(
+    file_id: UUID,
+    current_user: User = Depends(validate_admin)  # Ensure user is an admin
+):
     """Delete a file from storage."""
     try:
         storage = get_storage_client()
@@ -239,7 +239,7 @@ async def delete_file(file_id: UUID, current_user: User = Depends(validate_admin
 
 @router.post("/strings/{file_id}", response_model=FileStringsResponse)
 async def extract_strings(
-    file_id: UUID, request: FileStringsRequest, current_user: User = Depends(get_current_active_user)
+    file_id: UUID, request: FileStringsRequest
 ):
     """Extract strings from a file."""
     try:
@@ -279,7 +279,7 @@ async def extract_strings(
 
 
 @router.post("/hex/{file_id}", response_model=FileHexResponse)
-async def get_hex_view(file_id: UUID, request: FileHexRequest, current_user: User = Depends(get_current_active_user)):
+async def get_hex_view(file_id: UUID, request: FileHexRequest):
     """Get hexadecimal view of file content."""
     try:
         storage = get_storage_client()

@@ -5,7 +5,6 @@ for the YaraFlux MCP Server, including JWT auth, storage options, and YARA setti
 """
 
 import os
-from datetime import UTC
 from pathlib import Path
 from typing import Any, Dict, Optional
 

@@ -12,8 +12,6 @@ from mcp.server.fastmcp import FastMCP
 
 from yaraflux_mcp_server.auth import init_user_db
 from yaraflux_mcp_server.config import settings
-from yaraflux_mcp_server.schema import TOOL_SCHEMAS
-from yaraflux_mcp_server.utils import register_tool_with_schema
 from yaraflux_mcp_server.yara_service import yara_service
 
 # Configure logging
@@ -136,7 +134,7 @@ def get_rule_content(name: str, source: str = "custom") -> str:
         return f"Error getting rule content: {str(e)}"
 
 
-def initialize_server():
+def initialize_server() -> None:
     """Initialize the MCP server environment."""
     logger.info("Initializing YaraFlux MCP Server...")
 
@@ -182,7 +180,7 @@ def initialize_server():
         raise
 
 
-async def list_registered_tools():
+async def list_registered_tools() -> list:
     """List all registered tools."""
     try:
         # Get tools using the async method properly
@@ -232,19 +230,20 @@ def run_server(transport_mode="http"):
             # Import stdio_server here since it's only needed for stdio mode
             from mcp.server.stdio import stdio_server
 
-            async def run_stdio():
+            async def run_stdio() -> None:
                 async with stdio_server() as (read_stream, write_stream):
                     # Before the main run, we can list tools properly
                     await list_registered_tools()
 
                     # Now run the server
+                    # noinspection PyProtectedMember
                     await mcp._mcp_server.run(
                         read_stream, write_stream, mcp._mcp_server.create_initialization_options()
                     )
 
             asyncio.run(run_stdio())
         else:
-            logger.info(f"Starting MCP server with HTTP transport on port {settings.API_PORT}")
+            logger.info("Starting MCP server with HTTP transport")
             # For HTTP mode, we need to handle the async method differently
             # since mcp.run() is not async itself
             asyncio.run(list_registered_tools())

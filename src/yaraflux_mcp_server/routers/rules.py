@@ -7,7 +7,6 @@ adding, updating, and deleting rules.
 import logging
 from datetime import UTC, datetime
 from typing import List, Optional
-
 from fastapi import (
     APIRouter,
     Body,
@@ -59,13 +58,14 @@ except Exception as e:
         except Exception as e:
             return {"valid": False, "message": str(e)}
 
-    def import_rules_tool(url=None, branch="master"):
+    def import_rules_tool(url: Optional[str] = None, branch: str = "master"):
         # Simple import implementation
-        return {"success": False, "message": "MCP tools not available for import"}
+        url_msg = f" from {url}" if url else ""
+        return {"success": False, "message": f"MCP tools not available for import{url_msg}"}
 
 
 @router.get("/", response_model=List[YaraRuleMetadata])
-async def list_rules(source: Optional[str] = None, current_user: User = Depends(get_current_active_user)):
+async def list_rules(source: Optional[str] = None):
     """List all YARA rules.
 
     Args:
@@ -86,7 +86,6 @@ async def list_rules(source: Optional[str] = None, current_user: User = Depends(
 async def get_rule(
     rule_name: str,
     source: Optional[str] = "custom",
-    current_user: User = Depends(get_current_active_user),
 ):
     """Get a YARA rule's content and metadata.
 
@@ -127,7 +126,6 @@ async def get_rule(
 async def get_rule_raw(
     rule_name: str,
     source: Optional[str] = "custom",
-    current_user: User = Depends(get_current_active_user),
 ):
     """Get a YARA rule's raw content as plain text.
 
@@ -341,7 +339,7 @@ async def import_rules(url: Optional[str] = None, branch: str = "master", curren
 
 
 @router.post("/validate")
-async def validate_rule(request: Request, current_user: User = Depends(get_current_active_user)):
+async def validate_rule(request: Request):
     """Validate a YARA rule.
 
     This endpoint tries to handle both JSON and plain text inputs, with some format detection.
@@ -393,7 +391,6 @@ async def validate_rule(request: Request, current_user: User = Depends(get_curre
 @router.post("/validate/plain")
 async def validate_rule_plain(
     content: str = Body(..., media_type="text/plain"),
-    current_user: User = Depends(get_current_active_user),
 ):
     """Validate a YARA rule submitted as plain text.
 
