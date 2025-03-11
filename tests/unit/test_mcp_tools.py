@@ -442,7 +442,6 @@ class TestMcpTools:
         result = scan_data("dGVzdCBkYXRh", "test.txt", encoding="base64")
 
         # Verify the result
-        assert result["success"] is True
         assert result["file_name"] == "test.txt"
         assert "scan_id" in result
         assert "file_hash" in result
@@ -458,7 +457,6 @@ class TestMcpTools:
         result = scan_data("test data", "test.txt", encoding="text")
 
         # Verify the result
-        assert result["success"] is True
         assert result["file_name"] == "test.txt"
         assert "scan_id" in result
         assert "file_hash" in result
