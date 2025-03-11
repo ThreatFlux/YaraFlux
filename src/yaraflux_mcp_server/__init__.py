@@ -1,6 +1,6 @@
 """YaraFlux MCP Server package."""
 
-__version__ = "1.0.8"
+__version__ = "1.0.9"
 
 # Import the FastAPI app for ASGI servers to find it
 try:
