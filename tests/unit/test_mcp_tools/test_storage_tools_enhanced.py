@@ -559,7 +559,9 @@ def test_clean_storage_missing_date(mock_get_storage):
 @patch("os.path.getmtime")
 @patch("os.path.getsize")
 @patch("os.remove")
-def test_clean_storage_results_only(mock_remove, mock_getsize, mock_getmtime, mock_listdir, mock_exists, mock_get_storage):
+def test_clean_storage_results_only(
+    mock_remove, mock_getsize, mock_getmtime, mock_listdir, mock_exists, mock_get_storage
+):
     """Test clean_storage with results storage type."""
     mock_storage = Mock()
     mock_storage.__class__.__name__ = "LocalStorageClient"
@@ -586,12 +588,12 @@ def test_clean_storage_results_only(mock_remove, mock_getsize, mock_getmtime, mo
 
     # Set file modification times
     def getmtime_side_effect(path):
-            if old_file in str(path):
-                # 40 days ago - use naive datetime for timestamp
-                return (datetime.now() - timedelta(days=40)).timestamp()
-            else:
-                # 10 days ago - use naive datetime for timestamp
-                return (datetime.now() - timedelta(days=10)).timestamp()
+        if old_file in str(path):
+            # 40 days ago - use naive datetime for timestamp
+            return (datetime.now() - timedelta(days=40)).timestamp()
+        else:
+            # 10 days ago - use naive datetime for timestamp
+            return (datetime.now() - timedelta(days=10)).timestamp()
 
     mock_getmtime.side_effect = getmtime_side_effect
 
@@ -621,9 +623,7 @@ def test_clean_storage_results_only(mock_remove, mock_getsize, mock_getmtime, mo
 @patch("os.path.getmtime")
 @patch("os.path.getsize")
 @patch("os.remove")
-def test_clean_storage_all_types(
-    mock_remove, mock_getsize, mock_getmtime, mock_listdir, mock_exists, mock_get_storage
-):
+def test_clean_storage_all_types(mock_remove, mock_getsize, mock_getmtime, mock_listdir, mock_exists, mock_get_storage):
     """Test clean_storage with 'all' storage type."""
     mock_storage = Mock()
     mock_storage.__class__.__name__ = "LocalStorageClient"

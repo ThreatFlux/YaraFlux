@@ -1247,7 +1247,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/2f/3a/0d2970e76215ab7a8
 
 [[package]]
 name = "yaraflux-mcp-server"
-version = "1.0.6"
+version = "1.0.7"
 source = { editable = "." }
 dependencies = [
     { name = "click" },

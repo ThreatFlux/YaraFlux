@@ -241,7 +241,7 @@ def configure_logging(
         backup_count: Number of backup files to keep
     """
     # Threading is now imported at module level
-    
+
     # Create handlers
     handlers = {}
 

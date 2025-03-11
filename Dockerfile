@@ -42,7 +42,30 @@ COPY requirements.txt /app/
 RUN pip install --no-cache-dir -U pip setuptools wheel && \
     pip install --no-cache-dir -r requirements.txt
 
-# Stage 2: Production stage
+# Stage 2: Test stage
+FROM builder AS test
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Install uv
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh  && \
+    mv /root/.local/bin/uv /usr/local/bin/uv
+# Install test dependencies using uv
+COPY requirements.txt setup.py pyproject.toml README.md /app/
+COPY src/yaraflux_mcp_server /app/src/yaraflux_mcp_server
+RUN uv venv && \
+	uv pip install -e ".[dev]" \
+    && uv pip install -e ".[test]" \
+    && uv pip install PyJWT coverage black pylint mypy pytest pytest-cov pytest-mock
+
+# Copy test files and configs
+COPY tests/ /app/tests/
+COPY .coveragerc /app/
+COPY .pylintrc /app/
+COPY mypy.ini /app/
+COPY pytest.ini /app/
+ENTRYPOINT ["bash"]
+
+# Stage 3: Production stage
 FROM base AS production
 
 # Build arguments for metadata

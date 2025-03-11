@@ -1,4 +1,4 @@
-.PHONY: all clean install dev-setup test lint format build docker-build docker-run docker-test mypy security-check coverage run import-rules lock sync check-deps get-version bump-version
+.PHONY: all clean install dev-setup test lint format build docker-build docker-run docker-test docker-coverage mypy security-check coverage run import-rules lock sync check-deps get-version bump-version
 
 # Default target
 all: clean install test lint
@@ -207,9 +207,26 @@ docker-run:
 	$(DOCKER_TAG)
 
 # Docker test with health check
+docker-coverage:
+	@echo "Running tests, coverage, format, lint and type checks in Docker..."
+	docker build --target test -t $(IMAGE_NAME):test .
+	docker run -e JWT_SECRET_KEY=your_jwt_secret_key \
+	-e ADMIN_PASSWORD=your_admin_password \
+	--rm $(IMAGE_NAME):test -c "cd /app && \
+ 	uv pip install PyJWT coverage black pylint mypy pytest pytest-cov pytest-mock && \
+ 	uv lock && \
+ 	uv run black /app/src/ /app/tests/ && \
+ 	uv run isort /app/src/ /app/tests/ && \
+ 	uv run pylint --rcfile=/app/.pylintrc /app/src/yaraflux_mcp_server --fail-under=9 && \
+ 	uv run pytest -v /app/tests/ && \
+ 	uv run coverage report && \
+ 	uv run coverage html && \
+ 	uv run coverage xml"
+
+
+# Docker test with health check
 docker-test:
-	@echo "Testing Docker container health check..."
-	@echo "Stopping and removing any existing test container..."
+	@echo "Testing Docker container health status..."
 	docker stop $(CONTAINER_NAME) >/dev/null 2>&1 || true
 	docker rm $(CONTAINER_NAME) >/dev/null 2>&1 || true
 
@@ -338,9 +355,4 @@ help:
 	@echo " docker-build : Build Docker image"
 	@echo " docker-run : Run Docker container"
 	@echo " docker-test : Test Docker container health status"
-	@echo " run : Run development server"
-	@echo " import-rules : Import ThreatFlux YARA rules"
-	@echo " get-version : Display current and next version numbers"
-	@echo " bump-version : Bump patch version in all relevant files"
-	@echo " build : Build Python package"
-	@echo ""
+	@echo " docker-coverage : Run tests, coverage, format, lint and type checks in Docker"

@@ -124,7 +124,7 @@ class TestJsonFormatter:
         )
         # Set the funcName explicitly since we're expecting it in the test
         record.funcName = "?"
-        
+
         # Add a request ID
         record.request_id = "test-json-id"
 
@@ -195,7 +195,7 @@ class TestJsonFormatter:
             exc_info=None,
         )
         record.request_id = "test-extras-id"
-        
+
         # Add custom attributes
         record.custom_str = "custom value"
         record.custom_int = 123
@@ -287,6 +287,7 @@ class TestLogEntryExit:
 
     def test_log_entry_exit_success(self, mock_logger):
         """Test the decorator with a successful function."""
+
         # Create a decorated function
         @log_entry_exit(logger=mock_logger)
         def test_function(arg1, arg2=None):
@@ -301,19 +302,20 @@ class TestLogEntryExit:
 
         # Verify logging
         assert mock_logger.log.call_count == 2  # Entry and exit logs
-        
+
         # Check that the entry log contains the function name and arguments
         entry_log_call = mock_logger.log.call_args_list[0]
         assert "Entering test_function" in entry_log_call[0][1]
         assert "5" in entry_log_call[0][1]  # arg1
         assert "arg2=10" in entry_log_call[0][1]  # arg2
-        
+
         # Check the exit log
         exit_log_call = mock_logger.log.call_args_list[1]
         assert "Exiting test_function" in exit_log_call[0][1]
 
     def test_log_entry_exit_exception(self, mock_logger):
         """Test the decorator with a function that raises an exception."""
+
         # Create a decorated function that raises an exception
         @log_entry_exit(logger=mock_logger)
         def failing_function():
@@ -327,11 +329,11 @@ class TestLogEntryExit:
         # Verify logging - should have entry log and exception log
         assert mock_logger.log.call_count == 1  # Entry log
         assert mock_logger.exception.call_count == 1  # Exception log
-        
+
         # Check entry log
         entry_log_call = mock_logger.log.call_args_list[0]
         assert "Entering failing_function" in entry_log_call[0][1]
-        
+
         # Check exception log
         exception_log_call = mock_logger.exception.call_args_list[0]
         assert "Exception in failing_function" in exception_log_call[0][0]
@@ -354,20 +356,20 @@ class TestConfigureLogging:
 
         # Verify dictionary config was called
         mock_dict_config.assert_called_once()
-        
+
         # Check that the config has the expected structure
         config = mock_dict_config.call_args[0][0]
         assert "formatters" in config
         assert "filters" in config
         assert "handlers" in config
         assert "loggers" in config
-        
+
         # Verify console handler is included by default
         assert "console" in config["handlers"]
-        
+
         # Verify no file handler by default
         assert "file" not in config["handlers"]
-        
+
         # Verify the logger was used to log configuration
         mock_get_logger.assert_called_with("yaraflux_mcp_server")
         mock_logger.info.assert_called_once()
@@ -378,29 +380,29 @@ class TestConfigureLogging:
         # Mock the logger
         mock_logger = MagicMock()
         mock_get_logger.return_value = mock_logger
-        
+
         # Patch os.makedirs to track creation of log directory
         with patch("os.makedirs") as mock_makedirs:
             # Call configure_logging with a log file
             configure_logging(log_file="/tmp/test_log.log", log_level="DEBUG")
-            
+
             # Verify the log directory was created
             mock_makedirs.assert_called_once()
             assert "/tmp" in mock_makedirs.call_args[0][0]
-        
+
         # Verify dictionary config was called
         mock_dict_config.assert_called_once()
-        
+
         # Check the config has a file handler
         config = mock_dict_config.call_args[0][0]
         assert "file" in config["handlers"]
         assert config["handlers"]["file"]["filename"] == "/tmp/test_log.log"
         assert config["handlers"]["file"]["level"] == "DEBUG"
-        
+
         # Verify both console and file handlers are used
         assert len(config["handlers"]) == 2
         assert "console" in config["handlers"]
-        
+
         # Verify the logger was configured with both handlers
         root_logger = config["loggers"][""]
         assert "console" in root_logger["handlers"]
@@ -411,18 +413,18 @@ class TestConfigureLogging:
         # Mock the logger
         mock_logger = MagicMock()
         mock_get_logger.return_value = mock_logger
-        
+
         # Call configure_logging with no console output
         configure_logging(log_to_console=False, log_file="/tmp/test_log.log")
-        
+
         # Verify dictionary config was called
         mock_dict_config.assert_called_once()
-        
+
         # Check the config has no console handler
         config = mock_dict_config.call_args[0][0]
         assert "console" not in config["handlers"]
         assert "file" in config["handlers"]
-        
+
         # Verify only file handler is used
         assert len(config["handlers"]) == 1
         assert config["loggers"][""]["handlers"] == ["file"]
@@ -432,13 +434,13 @@ class TestConfigureLogging:
         # Mock the logger
         mock_logger = MagicMock()
         mock_get_logger.return_value = mock_logger
-        
+
         # Call configure_logging with plaintext formatting
         configure_logging(enable_json=False)
-        
+
         # Verify dictionary config was called
         mock_dict_config.assert_called_once()
-        
+
         # Check the config uses standard formatter
         config = mock_dict_config.call_args[0][0]
         assert config["handlers"]["console"]["formatter"] == "standard"
