@@ -19,10 +19,11 @@ from yaraflux_mcp_server.models import (
     FileHexResponse,
     FileInfo,
     FileListResponse,
+    FileString,
     FileStringsRequest,
     FileStringsResponse,
     FileUploadResponse,
-    User, FileString,
+    User,
 )
 from yaraflux_mcp_server.storage import StorageError, get_storage_client
 
@@ -58,7 +59,7 @@ async def upload_file(
         file_metadata = {}
         if metadata:
             try:
-                import json
+                import json  # pylint: disable=import-outside-toplevel
 
                 file_metadata = json.loads(metadata)
                 if not isinstance(file_metadata, dict):
@@ -115,12 +116,12 @@ async def get_file_info(file_id: UUID):
         return response
     except StorageError as e:
         logger.error(f"File not found: {file_id}")
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"File not found: {file_id}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"File not found: {file_id}") from e
     except Exception as e:
         logger.error(f"Error getting file info: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error getting file info: {str(e)}"
-        )
+        ) from e
 
 
 @router.get("/download/{file_id}")
@@ -157,12 +158,12 @@ async def download_file(
         )
     except StorageError as e:
         logger.error(f"File not found: {file_id}")
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"File not found: {file_id}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"File not found: {file_id}") from e
     except Exception as e:
         logger.error(f"Error downloading file: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error downloading file: {str(e)}"
-        )
+        ) from e
 
 
 @router.get("/list", response_model=FileListResponse)
@@ -203,15 +204,16 @@ async def list_files(
         return response
     except Exception as e:
         logger.error(f"Error listing files: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error listing files: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error listing files: {str(e)}"
+        ) from e
 
 
 @router.delete("/{file_id}", response_model=FileDeleteResponse)
-async def delete_file(
-    file_id: UUID,
-    current_user: User = Depends(validate_admin)  # Ensure user is an admin
-):
+async def delete_file(file_id: UUID, current_user: User = Depends(validate_admin)):  # Ensure user is an admin
     """Delete a file from storage."""
+    if not current_user.role.ADMIN:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     try:
         storage = get_storage_client()
 
@@ -221,26 +223,25 @@ async def delete_file(
             file_name = file_info.get("file_name", "Unknown file")
         except StorageError:
             # File not found, respond with error
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"File not found: {file_id}")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"File not found: {file_id}") from None
 
         # Delete the file
         result = storage.delete_file(str(file_id))
 
         if result:
             return FileDeleteResponse(file_id=file_id, success=True, message=f"File {file_name} deleted successfully")
-        else:
-            return FileDeleteResponse(file_id=file_id, success=False, message=f"File could not be deleted")
+        return FileDeleteResponse(file_id=file_id, success=False, message="File could not be deleted")
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error deleting file: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error deleting file: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error deleting file: {str(e)}"
+        ) from e
 
 
 @router.post("/strings/{file_id}", response_model=FileStringsResponse)
-async def extract_strings(
-    file_id: UUID, request: FileStringsRequest
-):
+async def extract_strings(file_id: UUID, request: FileStringsRequest):
     """Extract strings from a file."""
     try:
         storage = get_storage_client()
@@ -270,12 +271,12 @@ async def extract_strings(
         return response
     except StorageError as e:
         logger.error(f"File not found: {file_id}")
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"File not found: {file_id}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"File not found: {file_id}") from e
     except Exception as e:
         logger.error(f"Error extracting strings: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error extracting strings: {str(e)}"
-        )
+        ) from e
 
 
 @router.post("/hex/{file_id}", response_model=FileHexResponse)
@@ -297,11 +298,11 @@ async def get_hex_view(file_id: UUID, request: FileHexRequest):
         )
 
         return response
-    except StorageError as e:
+    except StorageError as error:
         logger.error(f"File not found: {file_id}")
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"File not found: {file_id}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"File not found: {file_id}") from error
     except Exception as e:
         logger.error(f"Error getting hex view: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error getting hex view: {str(e)}"
-        )
+        ) from e

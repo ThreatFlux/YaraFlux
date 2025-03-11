@@ -123,7 +123,7 @@ async def create_new_user(
         logger.info(f"User {username} created by {current_user.username}")
         return user
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
 
 @router.delete("/users/{username}")
@@ -149,7 +149,7 @@ async def remove_user(username: str, current_user: User = Depends(validate_admin
 
         return {"message": f"User {username} deleted"}
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
 
 @router.put("/users/{username}")
@@ -186,4 +186,4 @@ async def update_user_info(
 
         return {"message": f"User {username} updated"}
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e

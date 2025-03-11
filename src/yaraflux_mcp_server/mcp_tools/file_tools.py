@@ -55,7 +55,7 @@ def upload_file(
             try:
                 decoded_data = base64.b64decode(data)
             except Exception as e:
-                raise ValueError(f"Invalid base64 data: {str(e)}")
+                raise ValueError(f"Invalid base64 data: {str(e)}") from e
         else:  # encoding == "text"
             decoded_data = data.encode("utf-8")
 
@@ -200,8 +200,7 @@ def delete_file(file_id: str) -> Dict[str, Any]:
 
         if result:
             return {"success": True, "message": f"File {file_name} deleted successfully", "file_id": file_id}
-        else:
-            return {"success": False, "message": f"File {file_id} not found or could not be deleted"}
+        return {"success": False, "message": f"File {file_id} not found or could not be deleted"}
     except StorageError as e:
         logger.error(f"Error deleting file: {str(e)}")
         return {"success": False, "message": f"Error deleting file: {str(e)}"}

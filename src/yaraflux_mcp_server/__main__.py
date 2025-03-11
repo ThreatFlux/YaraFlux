@@ -57,7 +57,7 @@ def run(host: str, port: int, debug: bool, workers: int) -> None:
 def import_rules(url: str, branch: str) -> None:
     """Import ThreatFlux YARA rules."""
     # Import dependencies inline to avoid circular imports
-    from yaraflux_mcp_server.mcp_tools import import_threatflux_rules
+    from yaraflux_mcp_server.mcp_tools import import_threatflux_rules  # pylint: disable=import-outside-toplevel
 
     # Import rules
     logger.info(f"Importing rules from {url or 'default ThreatFlux repository'}")

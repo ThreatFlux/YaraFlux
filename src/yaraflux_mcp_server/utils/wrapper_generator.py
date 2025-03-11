@@ -246,7 +246,9 @@ def register_tool_with_schema(
                 logger.info(f"{func_name} called")
 
             # Parse and validate parameters using schema
-            from yaraflux_mcp_server.utils.param_parsing import parse_and_validate_params
+            from yaraflux_mcp_server.utils.param_parsing import (  # pylint: disable=import-outside-toplevel
+                parse_and_validate_params,
+            )
 
             parsed_params = parse_and_validate_params(params, param_schema)
 

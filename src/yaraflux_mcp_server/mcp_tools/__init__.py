@@ -41,7 +41,7 @@ def init_fastapi(app: FastAPI) -> None:
             return ToolRegistry.get_all_tools()
         except Exception as e:
             logger.error(f"Error getting tools: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"Error getting tools: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Error getting tools: {str(e)}") from e
 
     @app.post("/mcp/v1/execute")
     async def execute_tool(request: Request) -> Dict[str, Any]:
@@ -67,10 +67,10 @@ def init_fastapi(app: FastAPI) -> None:
             result = ToolRegistry.execute_tool(name, params)
             return {"result": result}
         except KeyError as e:
-            raise HTTPException(status_code=404, detail=str(e))
+            raise HTTPException(status_code=404, detail=str(e)) from e
         except Exception as e:
             logger.error(f"Error executing tool: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"Error executing tool: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Error executing tool: {str(e)}") from e
 
 
 # Import tool modules dynamically to prevent circular imports

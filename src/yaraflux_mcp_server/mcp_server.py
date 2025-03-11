@@ -222,13 +222,13 @@ def run_server(transport_mode="http"):
         mcp.on_disconnect = lambda: logger.info("MCP connection closed")
 
         # Import asyncio here to ensure it's available for both modes
-        import asyncio
+        import asyncio  # pylint: disable=import-outside-toplevel
 
         # Run with appropriate transport
         if transport_mode == "stdio":
             logger.info("Starting MCP server with stdio transport")
             # Import stdio_server here since it's only needed for stdio mode
-            from mcp.server.stdio import stdio_server
+            from mcp.server.stdio import stdio_server  # pylint: disable=import-outside-toplevel
 
             async def run_stdio() -> None:
                 async with stdio_server() as (read_stream, write_stream):
@@ -269,8 +269,10 @@ if __name__ == "__main__":
             transport_index = sys.argv.index("--transport") + 1
             if transport_index < len(sys.argv):
                 transport = sys.argv[transport_index]
-        except:
-            pass
+        except IndexError:
+            logger.error("Invalid transport argument")
+        except Exception as e:
+            logger.error("Error parsing transport argument: %s", str(e))
 
     logger.info(f"Using transport mode: {transport}")
     run_server(transport)

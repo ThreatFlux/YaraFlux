@@ -10,6 +10,7 @@ import os
 import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
+from tarfile import ReadError
 from typing import Any, Dict, List, Optional
 
 import httpx
@@ -141,8 +142,8 @@ def validate_yara_rule(content: str) -> Dict[str, Any]:
         except YaraError as e:
             # Capture the original compilation error
             error_message = str(e)
-            logger.debug(f"YARA compilation error: {error_message}")
-            raise YaraError(f"Rule validation failed: {error_message}")
+            logger.debug("YARA compilation error: %s", error_message)
+            raise YaraError("Rule validation failed: " + error_message) from e
 
     except YaraError as e:
         logger.error(f"YARA error in validate_yara_rule: {str(e)}")
@@ -287,7 +288,7 @@ def delete_yara_rule(name: str, source: str = "custom") -> Dict[str, Any]:
 
 
 @register_tool()
-def import_threatflux_rules(url: Optional[str] = None, branch: str = "master") -> Dict[str, Any]:
+def import_threatflux_rules(url: Optional[str] = None, branch: str = "main") -> Dict[str, Any]:
     """Import ThreatFlux YARA rules from GitHub.
 
     For LLM users connecting through MCP, this can be invoked with natural language like:
@@ -309,7 +310,7 @@ def import_threatflux_rules(url: Optional[str] = None, branch: str = "master") -
 
         # Validate branch
         if not branch:
-            branch = "master"
+            branch = "main"
 
         import_count = 0
         error_count = 0
@@ -319,9 +320,9 @@ def import_threatflux_rules(url: Optional[str] = None, branch: str = "master") -
             # Test connection by attempting to access the URL
             test_response = httpx.get(url.replace("github.com", "raw.githubusercontent.com"), timeout=10)
             if test_response.status_code >= 400:
-                raise Exception(f"HTTP error: {test_response.status_code}")
-        except Exception as e:
-            logger.error(f"Connection error: {str(e)}")
+                raise ValueError(f"HTTP {test_response.status_code}")
+        except ConnectionError as e:
+            logger.error("Connection error in import_threatflux_rules: %s", str(e))
             return {"success": False, "message": f"Connection error: {str(e)}", "error": str(e)}
 
         # Create a temporary directory for downloading the repo
@@ -372,8 +373,8 @@ def import_threatflux_rules(url: Optional[str] = None, branch: str = "master") -
                                 error_count += 1
                     else:
                         # No index.json, try a different approach
-                        raise Exception("No index.json found")
-                except Exception:
+                        raise ValueError("Index not found")
+                except Exception:  # noqa
                     # Try fetching individual .yar files from specific directories
                     directories = ["malware", "general", "packer", "persistence"]
 
@@ -419,8 +420,11 @@ def import_threatflux_rules(url: Optional[str] = None, branch: str = "master") -
                         rule_name = rule_file.name
                         yara_service.add_rule(rule_name, rule_content, "community")
                         import_count += 1
-                    except Exception as e:
-                        logger.error(f"Error importing rule {rule_file}: {str(e)}")
+                    except FileNotFoundError:
+                        logger.warning("Rule file not found: %s", rule_file)
+                        error_count += 1
+                    except ReadError as e:
+                        logger.error("Error reading rule file: %s", str(e))
                         error_count += 1
 
         # Reload rules

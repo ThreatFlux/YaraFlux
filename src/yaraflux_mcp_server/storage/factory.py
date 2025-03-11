@@ -28,7 +28,7 @@ def get_storage_client() -> StorageClient:
     """
     if settings.USE_MINIO:
         try:
-            from yaraflux_mcp_server.storage.minio import MinioStorageClient
+            from yaraflux_mcp_server.storage.minio import MinioStorageClient  # pylint: disable=import-outside-toplevel
 
             logger.info("Using MinIO storage client")
             return MinioStorageClient()

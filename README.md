@@ -90,8 +90,18 @@ For detailed architecture diagrams, see the [Architecture Documentation](docs/ar
   - Configurable access controls
 
 ## 🚀 Quick Start
+### Using Docker Image
 
-### Using Docker (Recommended)
+```bash
+# Pull the latest Docker image
+docker pull threatflux/yaraflux-mcp-server:latest
+# Run the container
+docker run -p 8000:8000 \
+  -e JWT_SECRET_KEY=your-secret-key \
+  -e ADMIN_PASSWORD=your-admin-password \
+  -e DEBUG=true \
+  threatflux/yaraflux-mcp-server:latest
+### Using Docker building from source
 
 ```bash
 # Clone the repository
@@ -150,7 +160,7 @@ docker build -t yaraflux-mcp-server:latest .
         "DEBUG=true",
         "--env",
         "PYTHONUNBUFFERED=1",
-        "yaraflux-mcp-server:latest"
+        "threatflux/yaraflux-mcp-server:latest"
       ],
       "disabled": false,
       "autoApprove": [
@@ -222,7 +232,6 @@ yaraflux_mcp_server/
 │       ├── config.py              # Configuration settings loader
 │       ├── models.py              # Pydantic models for requests/responses
 │       ├── mcp_server.py          # MCP server implementation
-│       ├── schema.py              # JSON schemas for tool parameters
 │       ├── utils/                 # Utility functions package
 │       │   ├── __init__.py        # Package initialization
 │       │   ├── error_handling.py  # Standardized error handling

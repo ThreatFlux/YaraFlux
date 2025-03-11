@@ -43,7 +43,7 @@ def parse_params(params_str: str) -> Dict[str, Any]:
         return params_dict
     except Exception as e:
         logger.error(f"Error parsing params string: {str(e)}")
-        raise ValueError(f"Failed to parse parameters: {str(e)}")
+        raise ValueError(f"Failed to parse parameters: {str(e)}") from e
 
 
 def convert_param_type(value: str, param_type: Type) -> Any:
@@ -78,22 +78,21 @@ def convert_param_type(value: str, param_type: Type) -> Any:
         # Handle basic types
         if param_type is str:
             return value
-        elif param_type is int:
+        if param_type is int:
             return int(value)
-        elif param_type is float:
+        if param_type is float:
             return float(value)
-        elif param_type is bool:
+        if param_type is bool:
             # Handle both string and boolean inputs
             if isinstance(value, bool):
                 return value
-            elif isinstance(value, str):
+            if isinstance(value, str):
                 return value.lower() in ("true", "yes", "1", "t", "y")
-            elif isinstance(value, int):
+            if isinstance(value, int):
                 return bool(value)
-            else:
-                return bool(value)  # Try to convert any other type
+            return bool(value)  # Try to convert any other type
         # Handle list types
-        elif origin is list or origin is List:
+        if origin is list or origin is List:
             if not value:
                 return []
             # For lists, split by comma if it's a string
@@ -106,7 +105,7 @@ def convert_param_type(value: str, param_type: Type) -> Any:
                 return [item.strip() for item in items]
             return value
         # Handle dict types
-        elif origin is dict or origin is Dict:
+        if origin is dict or origin is Dict:
             if isinstance(value, str):
                 try:
                     return json.loads(value)
@@ -118,7 +117,7 @@ def convert_param_type(value: str, param_type: Type) -> Any:
         return value
     except Exception as e:
         logger.error(f"Error converting parameter to {param_type}: {str(e)}")
-        raise ValueError(f"Failed to convert parameter to {param_type}: {str(e)}")
+        raise ValueError(f"Failed to convert parameter to {param_type}: {str(e)}") from e
 
 
 def extract_typed_params(

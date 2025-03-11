@@ -350,7 +350,7 @@ def test_get_scan_result_json_decode_error(mock_get_storage):
     assert "success" in result
     assert not result["success"]  # Should be False
     assert "message" in result
-    assert "Invalid JSON result" in result["message"]
+    assert "Invalid JSON data: Expecting value: line 1 column 1 (char 0)" in result["message"]
 
 
 @patch("yaraflux_mcp_server.mcp_tools.scan_tools.get_storage_client")

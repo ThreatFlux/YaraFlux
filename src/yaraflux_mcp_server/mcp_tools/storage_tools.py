@@ -84,8 +84,7 @@ def get_storage_info() -> Dict[str, Any]:
         try:
             # This is an approximation since we don't have a direct way to list results
             # A more accurate implementation would need storage.list_results() method
-            import json
-            import os
+            import os  # pylint: disable=import-outside-toplevel
 
             results_path = getattr(storage, "results_dir", None)
             if results_path and os.path.exists(results_path):
@@ -164,9 +163,7 @@ def clean_storage(storage_type: str, older_than_days: Optional[int] = None) -> D
                 # Implementation depends on the storage backend
                 # For local storage, we can delete files older than cutoff_date
                 if hasattr(storage, "results_dir") and storage.results_dir.exists():
-                    import json
-                    import os
-                    from pathlib import Path
+                    import os  # pylint: disable=import-outside-toplevel
 
                     results_path = storage.results_dir
                     for file_path in results_path.glob("*.json"):
@@ -251,9 +248,8 @@ def format_size(size_bytes: int) -> str:
     """
     if size_bytes < 1024:
         return f"{size_bytes:.2f} B"
-    elif size_bytes < 1024 * 1024:
+    if size_bytes < 1024 * 1024:
         return f"{size_bytes / 1024:.2f} KB"
-    elif size_bytes < 1024 * 1024 * 1024:
+    if size_bytes < 1024 * 1024 * 1024:
         return f"{size_bytes / (1024 * 1024):.2f} MB"
-    else:
-        return f"{size_bytes / (1024 * 1024 * 1024):.2f} GB"
+    return f"{size_bytes / (1024 * 1024 * 1024):.2f} GB"

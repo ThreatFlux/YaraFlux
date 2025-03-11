@@ -60,9 +60,9 @@ async def scan_url(request: ScanRequest, current_user: User = Depends(get_curren
 
         return {"result": result}
     except YaraError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
 
 
 @router.post("/file", response_model=ScanResult)
@@ -117,9 +117,9 @@ async def scan_file(
                 except (IOError, OSError):
                     pass
     except YaraError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
 
 
 @router.get("/result/{scan_id}", response_model=ScanResult)
@@ -148,4 +148,4 @@ async def get_scan_result(scan_id: UUID):
 
         return {"result": result}
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Scan result not found: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Scan result not found: {str(e)}") from e

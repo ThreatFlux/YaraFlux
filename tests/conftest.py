@@ -10,7 +10,7 @@ pytest_plugins = ["pytest_asyncio"]
 # Set asyncio fixture default scope to function
 pytestmark = pytest.mark.asyncio(scope="function")
 
-from yaraflux_mcp_server.auth import UserRole, _user_db
+from yaraflux_mcp_server.auth import _user_db  # noqa
 from yaraflux_mcp_server.models import UserInDB
 from yaraflux_mcp_server.storage.base import StorageClient
 

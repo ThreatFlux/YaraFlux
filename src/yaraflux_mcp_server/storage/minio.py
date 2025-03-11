@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING, Any, BinaryIO, Dict, List, Optional, Tuple, Un
 try:
     from minio import Minio
     from minio.error import S3Error
-except ImportError:
-    raise ImportError("MinIO support requires the MinIO client library. " "Install it with: pip install minio")
+except ImportError as e:
+    raise ImportError("MinIO support requires the MinIO client library. Install it with: pip install minio") from e
 
 from yaraflux_mcp_server.storage.base import StorageClient, StorageError
 
@@ -32,9 +32,7 @@ class MinioStorageClient(StorageClient):
         """Initialize MinIO storage client."""
         # Validate MinIO settings
         if not all([settings.MINIO_ENDPOINT, settings.MINIO_ACCESS_KEY, settings.MINIO_SECRET_KEY]):
-            raise ValueError(
-                "MinIO storage requires MINIO_ENDPOINT, MINIO_ACCESS_KEY, " "and MINIO_SECRET_KEY settings"
-            )
+            raise ValueError("MinIO storage requires MINIO_ENDPOINT, MINIO_ACCESS_KEY, and MINIO_SECRET_KEY settings")
 
         # Initialize MinIO client
         self.client = Minio(
@@ -79,7 +77,7 @@ class MinioStorageClient(StorageClient):
                 logger.info(f"Created MinIO bucket: {bucket_name}")
         except S3Error as e:
             logger.error(f"Failed to create MinIO bucket {bucket_name}: {str(e)}")
-            raise StorageError(f"Failed to create MinIO bucket: {str(e)}")
+            raise StorageError(f"Failed to create MinIO bucket: {str(e)}") from e
 
     # TODO: Implement the rest of the StorageClient interface for MinIO
     # This would include implementations for all methods from the StorageClient abstract base class.

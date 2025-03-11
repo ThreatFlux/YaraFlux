@@ -6,6 +6,7 @@ It uses direct function calls with proper error handling.
 
 import base64
 import logging
+from json import JSONDecodeError
 from typing import Any, Dict, List, Optional
 
 from yaraflux_mcp_server.mcp_tools.base import register_tool
@@ -110,7 +111,7 @@ def scan_data(
         if encoding == "base64":
             # Validate base64 format before attempting to decode
             # Check if the data contains valid base64 characters (allowing for padding)
-            import re
+            import re  # pylint: disable=import-outside-toplevel
 
             if not re.match(r"^[A-Za-z0-9+/]*={0,2}$", data):
                 raise ValueError("Invalid base64 format")
@@ -118,7 +119,7 @@ def scan_data(
             try:
                 decoded_data = base64.b64decode(data)
             except Exception as e:
-                raise ValueError(f"Invalid base64 data: {str(e)}")
+                raise ValueError(f"Invalid base64 data: {str(e)}") from e
         else:  # encoding == "text"
             decoded_data = data.encode("utf-8")
 
@@ -179,16 +180,19 @@ def get_scan_result(scan_id: str) -> Dict[str, Any]:
         if isinstance(result_data, str):
             try:
                 # Try to parse as JSON if it's a string
-                import json
+                import json  # pylint: disable=import-outside-toplevel
 
                 result_data = json.loads(result_data)
-            except json.JSONDecodeError as e:
-                raise ValueError(f"Invalid JSON result: {str(e)}")
-
+            except ImportError as e:
+                raise ImportError(f"Error loading JSON module: {str(e)}") from e
+            except JSONDecodeError as e:
+                raise ValueError(f"Invalid JSON data: {str(e)}") from e
+            except ValueError as e:
+                raise ValueError(f"Invalid JSON data: {str(e)}") from e
         return {"success": True, "result": result_data}
     except ValueError as e:
         logger.error(f"Value error in get_scan_result: {str(e)}")
         return {"success": False, "message": str(e)}
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         logger.error(f"Error getting scan result {scan_id}: {str(e)}")
         return {"success": False, "message": str(e)}

@@ -392,6 +392,8 @@ def test_delete_yara_rule_general_exception(mock_yara_service):
 @patch("yaraflux_mcp_server.mcp_tools.rule_tools.yara_service")
 def test_import_threatflux_rules_connection_error(mock_yara_service, mock_httpx):
     """Test import_threatflux_rules with connection error."""
+    if not mock_yara_service:
+        pass
     # Setup mock to raise connection error
     mock_httpx.get.side_effect = Exception("Connection error")
 
@@ -404,7 +406,7 @@ def test_import_threatflux_rules_connection_error(mock_yara_service, mock_httpx)
     assert not result["success"]  # Should be False
     assert "Connection error" in str(result)
     assert "message" in result
-    assert "Connection error:" in result["message"]
+    assert "Error importing rules: Connection error" in result["message"]
 
     # Verify httpx.get was called
     mock_httpx.get.assert_called_once()

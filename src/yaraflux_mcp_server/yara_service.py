@@ -323,7 +323,9 @@ class YaraService:
 
             # Compile and cache the rule
             compiled_rule = self._compile_rule(rule_name, source)
-
+            if compiled_rule:
+                cache_key = f"{source}:{rule_name}"
+                self._rules_cache[cache_key] = compiled_rule
             # Return metadata
             return YaraRuleMetadata(name=rule_name, source=source, created=datetime.now(UTC), is_compiled=True)
         except StorageError as e:
@@ -347,9 +349,9 @@ class YaraService:
         # Ensure rule exists
         try:
             self.storage.get_rule(rule_name, source)
-        except StorageError:
+        except StorageError as e:
             logger.error(f"Rule not found: {rule_name} from {source}")
-            raise YaraError(f"Rule not found: {rule_name}")
+            raise YaraError(f"Rule not found: {rule_name}") from e
 
         # Add the rule (this will validate and save it)
         metadata = self.add_rule(rule_name, content, source)
@@ -399,7 +401,7 @@ class YaraService:
             return result
         except StorageError as e:
             logger.error(f"Storage error deleting rule {rule_name}: {str(e)}")
-            raise YaraError(f"Failed to delete rule: {str(e)}")
+            raise YaraError(f"Failed to delete rule: {str(e)}") from e
 
     def get_rule(self, rule_name: str, source: str = "custom") -> str:
         """Get a YARA rule's content.
@@ -418,7 +420,7 @@ class YaraService:
             return self.storage.get_rule(rule_name, source)
         except StorageError as e:
             logger.error(f"Storage error getting rule {rule_name}: {str(e)}")
-            raise YaraError(f"Failed to get rule: {str(e)}")
+            raise YaraError(f"Failed to get rule: {str(e)}") from e
 
     def list_rules(self, source: Optional[str] = None) -> List[YaraRuleMetadata]:
         """List all YARA rules.
@@ -475,7 +477,7 @@ class YaraService:
             return rules_metadata
         except StorageError as e:
             logger.error(f"Storage error listing rules: {str(e)}")
-            raise YaraError(f"Failed to list rules: {str(e)}")
+            raise YaraError(f"Failed to list rules: {str(e)}") from e
 
     def match_file(
         self,
@@ -564,7 +566,7 @@ class YaraService:
             return result
         except (IOError, OSError) as e:
             logger.error(f"File error scanning {file_path}: {str(e)}")
-            raise YaraError(f"Failed to scan file: {str(e)}")
+            raise YaraError(f"Failed to scan file: {str(e)}") from e
 
     def match_data(
         self,
@@ -660,7 +662,7 @@ class YaraService:
             return result
         except Exception as e:
             logger.error(f"Error scanning data {file_name}: {str(e)}")
-            raise YaraError(f"Failed to scan data: {str(e)}")
+            raise YaraError(f"Failed to scan data: {str(e)}") from e
 
     def fetch_and_scan(
         self,
@@ -709,12 +711,12 @@ class YaraService:
                     logger.warning(f"Downloaded file too large: {file_name} ({file_size} bytes)")
                     raise YaraError(
                         f"Downloaded file too large: {file_size} bytes (max {settings.YARA_MAX_FILE_SIZE} bytes)"
-                    )
+                    ) from None
 
                 # Try to get a better filename from Content-Disposition header if available
                 content_disposition = response.headers.get("Content-Disposition")
                 if content_disposition and "filename=" in content_disposition:
-                    import re
+                    import re  # pylint: disable=import-outside-toplevel
 
                     filename_match = re.search(r'filename="?([^";]+)"?', content_disposition)
                     if filename_match:
@@ -727,15 +729,14 @@ class YaraService:
                 if os.path.exists(file_path):
                     # If file_path is a real file on disk, use match_file
                     return self.match_file(file_path, rule_names, sources, timeout)
-                else:
-                    # Otherwise, use match_data
-                    return self.match_data(content, file_name, rule_names, sources, timeout)
+                # Otherwise, use match_data
+                return self.match_data(content, file_name, rule_names, sources, timeout)
         except httpx.RequestError as e:
             logger.error(f"HTTP request error fetching {url}: {str(e)}")
-            raise YaraError(f"Failed to fetch file: {str(e)}")
+            raise YaraError(f"Failed to fetch file: {str(e)}") from e
         except httpx.HTTPStatusError as e:
             logger.error(f"HTTP error fetching {url}: {e.response.status_code}")
-            raise YaraError(f"Failed to fetch file: HTTP {e.response.status_code}")
+            raise YaraError(f"Failed to fetch file: HTTP {e.response.status_code}") from e
         finally:
             # Clean up temporary file if created
             if temp_file:

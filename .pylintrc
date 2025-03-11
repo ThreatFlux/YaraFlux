@@ -66,10 +66,6 @@ disable=raw-checker-failed,
 # Set the output format
 output-format=text
 
-# Put messages in a separate file for each module / package specified on the
-# command line instead of printing them on stdout.
-files-output=no
-
 # Tells whether to display a full report or only the messages
 reports=no
 

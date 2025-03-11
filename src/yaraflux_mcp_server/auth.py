@@ -31,15 +31,15 @@ logger = logging.getLogger(__name__)
 try:
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     logger.info("Successfully initialized bcrypt password hashing")
-except Exception as e:
-    logger.error(f"Error initializing bcrypt: {str(e)}")
+except Exception as exc:
+    logger.error(f"Error initializing bcrypt: {str(exc)}")
     # Fallback to basic schemes if bcrypt fails
     try:
         pwd_context = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
         logger.warning("Using fallback password hashing (sha256_crypt) due to bcrypt initialization failure")
-    except Exception as e:
-        logger.critical(f"Critical error initializing password hashing: {str(e)}")
-        raise RuntimeError("Failed to initialize password hashing system")
+    except Exception as inner_exc:
+        logger.critical(f"Critical error initializing password hashing: {str(inner_exc)}")
+        raise RuntimeError("Failed to initialize password hashing system") from inner_exc
 
 # OAuth2 scheme for token authentication
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_PREFIX}/auth/token")
@@ -148,14 +148,14 @@ def decode_token(token: str) -> TokenData:
 
         return TokenData(username=username, role=role, exp=datetime.fromtimestamp(exp, UTC) if exp else None)
 
-    except JWTError as e:
-        logger.warning(f"Token validation error: {str(e)}")
+    except JWTError as exc:
+        logger.warning(f"Token validation error: {str(exc)}")
         # Use the error message from the JWTError
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e),
+            detail=str(exc),
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        ) from exc
 
 
 def refresh_access_token(refresh_token: str) -> str:
@@ -178,13 +178,13 @@ def refresh_access_token(refresh_token: str) -> str:
         access_token_data = {"sub": username, "role": role}
         return create_access_token(access_token_data)
 
-    except JWTError as e:
-        logger.warning(f"Refresh token validation error: {str(e)}")
+    except JWTError as exc:
+        logger.warning(f"Refresh token validation error: {str(exc)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e),
+            detail=str(exc),
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        ) from exc
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:

@@ -7,6 +7,7 @@ adding, updating, and deleting rules.
 import logging
 from datetime import UTC, datetime
 from typing import List, Optional
+
 from fastapi import (
     APIRouter,
     Body,
@@ -55,10 +56,10 @@ except Exception as e:
             yara_service.add_rule(temp_rule_name, content)
             yara_service.delete_rule(temp_rule_name)
             return {"valid": True, "message": "Rule is valid"}
-        except Exception as e:
-            return {"valid": False, "message": str(e)}
+        except Exception as error:
+            return {"valid": False, "message": str(error)}
 
-    def import_rules_tool(url: Optional[str] = None, branch: str = "master"):
+    def import_rules_tool(url: Optional[str] = None, branch: str = "main"):
         # Simple import implementation
         url_msg = f" from {url}" if url else ""
         return {"success": False, "message": f"MCP tools not available for import{url_msg}"}
@@ -78,8 +79,8 @@ async def list_rules(source: Optional[str] = None):
     try:
         rules = yara_service.list_rules(source)
         return rules
-    except YaraError as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    except YaraError as error:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error)) from error
 
 
 @router.get("/{rule_name}", response_model=dict)
@@ -118,8 +119,8 @@ async def get_rule(
             "content": content,
             "metadata": metadata.model_dump() if metadata else {},
         }
-    except YaraError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except YaraError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
 
 
 @router.get("/{rule_name}/raw")
@@ -146,8 +147,8 @@ async def get_rule_raw(
 
         # Return as plain text
         return Response(content=content, media_type="text/plain")
-    except YaraError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except YaraError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
 
 
 @router.post("/", response_model=YaraRuleMetadata)
@@ -168,8 +169,8 @@ async def create_rule(rule: YaraRuleCreate, current_user: User = Depends(get_cur
         metadata = yara_service.add_rule(rule.name, rule.content)
         logger.info(f"Rule {rule.name} created by {current_user.username}")
         return metadata
-    except YaraError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except YaraError as error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
 
 
 @router.post("/upload", response_model=YaraRuleMetadata)
@@ -204,10 +205,10 @@ async def upload_rule(
         metadata = yara_service.add_rule(rule_name, content.decode("utf-8"), source)
         logger.info(f"Rule {rule_name} uploaded by {current_user.username}")
         return metadata
-    except YaraError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    except YaraError as err:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(err)) from err
+    except Exception as error:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error)) from error
 
 
 @router.put("/{rule_name}", response_model=YaraRuleMetadata)
@@ -235,11 +236,10 @@ async def update_rule(
         metadata = yara_service.update_rule(rule_name, content, source)
         logger.info(f"Rule {rule_name} updated by {current_user.username}")
         return metadata
-    except YaraError as e:
-        if "Rule not found" in str(e):
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-        else:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except YaraError as error:
+        if "Rule not found" in str(error):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
 
 
 @router.put("/{rule_name}/plain", response_model=YaraRuleMetadata)
@@ -270,11 +270,10 @@ async def update_rule_plain(
         metadata = yara_service.update_rule(rule_name, content, source)
         logger.info(f"Rule {rule_name} updated by {current_user.username} via plain text endpoint")
         return metadata
-    except YaraError as e:
-        if "Rule not found" in str(e):
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-        else:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except YaraError as error:
+        if "Rule not found" in str(error):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
 
 
 @router.delete("/{rule_name}")
@@ -303,8 +302,8 @@ async def delete_rule(rule_name: str, source: str = "custom", current_user: User
         logger.info(f"Rule {rule_name} deleted by {current_user.username}")
 
         return {"message": f"Rule {rule_name} deleted"}
-    except YaraError as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    except YaraError as error:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error)) from error
 
 
 @router.post("/import")
@@ -334,8 +333,8 @@ async def import_rules(url: Optional[str] = None, branch: str = "master", curren
         logger.info(f"Rules imported from {url or 'ThreatFlux repository'} by {current_user.username}")
 
         return result
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    except Exception as error:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error)) from error
 
 
 @router.post("/validate")
@@ -360,13 +359,10 @@ async def validate_rule(request: Request):
         # Basic heuristic to detect YARA vs JSON:
         # If it starts with a curly brace and has line breaks, it might be a YARA rule
         # If it doesn't look like valid JSON, treat it as a YARA rule
-        is_yara_rule = False
-        if content_str.strip().startswith("rule"):
-            is_yara_rule = True
-        else:
+        if not content_str.strip().startswith("rule"):
             try:
                 # Try to parse as JSON
-                import json
+                import json  # pylint: disable=import-outside-toplevel
 
                 json_content = json.loads(content_str)
 
@@ -379,13 +375,13 @@ async def validate_rule(request: Request):
                     content_str = json_content["content"]
             except json.JSONDecodeError:
                 # It wasn't valid JSON, assume it's a YARA rule
-                is_yara_rule = True
+                logger.error("Failed to decode JSON content from %s", content_str)
 
         # Use the validate_yara_rule MCP tool
         result = validate_rule_tool(content_str)
         return result
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    except Exception as error:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error)) from error
 
 
 @router.post("/validate/plain")
@@ -408,7 +404,7 @@ async def validate_rule_plain(
         result = validate_rule_tool(content)
         return result
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
 
 
 @router.post("/plain", response_model=YaraRuleMetadata)
@@ -439,5 +435,5 @@ async def create_rule_plain(
         metadata = yara_service.add_rule(rule_name, content, source)
         logger.info(f"Rule {rule_name} created by {current_user.username} via plain text endpoint")
         return metadata
-    except YaraError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except YaraError as error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error

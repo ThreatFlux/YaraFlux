@@ -73,7 +73,7 @@ class LocalStorageClient(StorageClient):
             return str(rule_path)
         except (IOError, OSError) as e:
             logger.error(f"Failed to save rule {rule_name}: {str(e)}")
-            raise StorageError(f"Failed to save rule: {str(e)}")
+            raise StorageError(f"Failed to save rule: {str(e)}") from e
 
     def get_rule(self, rule_name: str, source: str = "custom") -> str:
         """Get a YARA rule from the local filesystem."""
@@ -85,12 +85,12 @@ class LocalStorageClient(StorageClient):
             with open(rule_path, "r", encoding="utf-8") as f:
                 content = f.read()
             return content
-        except FileNotFoundError:
+        except FileNotFoundError as e:
             logger.error(f"Rule not found: {rule_name} in {source}")
-            raise StorageError(f"Rule not found: {rule_name}")
+            raise StorageError(f"Rule not found: {rule_name}") from e
         except (IOError, OSError) as e:
             logger.error(f"Failed to read rule {rule_name}: {str(e)}")
-            raise StorageError(f"Failed to read rule: {str(e)}")
+            raise StorageError(f"Failed to read rule: {str(e)}") from e
 
     def delete_rule(self, rule_name: str, source: str = "custom") -> bool:
         """Delete a YARA rule from the local filesystem."""
@@ -107,7 +107,7 @@ class LocalStorageClient(StorageClient):
             return False
         except (IOError, OSError) as e:
             logger.error(f"Failed to delete rule {rule_name}: {str(e)}")
-            raise StorageError(f"Failed to delete rule: {str(e)}")
+            raise StorageError(f"Failed to delete rule: {str(e)}") from e
 
     def list_rules(self, source: Optional[str] = None) -> List[Dict[str, Any]]:
         """List all YARA rules in the local filesystem."""
@@ -176,7 +176,7 @@ class LocalStorageClient(StorageClient):
             return str(file_path), file_hash
         except (IOError, OSError) as e:
             logger.error(f"Failed to save sample {filename}: {str(e)}")
-            raise StorageError(f"Failed to save sample: {str(e)}")
+            raise StorageError(f"Failed to save sample: {str(e)}") from e
 
     def get_sample(self, sample_id: str) -> bytes:
         """Get a sample from the local filesystem."""
@@ -186,7 +186,7 @@ class LocalStorageClient(StorageClient):
                 with open(sample_id, "rb") as f:
                     return f.read()
             except (IOError, OSError) as e:
-                raise StorageError(f"Failed to read sample: {str(e)}")
+                raise StorageError(f"Failed to read sample: {str(e)}") from e
 
         # Check if sample_id is a hash
         if len(sample_id) == 64:  # SHA-256 hash length
@@ -200,7 +200,7 @@ class LocalStorageClient(StorageClient):
                         with open(files[0], "rb") as f:
                             return f.read()
                     except (IOError, OSError) as e:
-                        raise StorageError(f"Failed to read sample: {str(e)}")
+                        raise StorageError(f"Failed to read sample: {str(e)}") from e
 
         raise StorageError(f"Sample not found: {sample_id}")
 
@@ -220,7 +220,7 @@ class LocalStorageClient(StorageClient):
             return str(result_path)
         except (IOError, OSError) as e:
             logger.error(f"Failed to save result {result_id}: {str(e)}")
-            raise StorageError(f"Failed to save result: {str(e)}")
+            raise StorageError(f"Failed to save result: {str(e)}") from e
 
     def get_result(self, result_id: str) -> Dict[str, Any]:
         """Get a scan result from the local filesystem."""
@@ -235,12 +235,12 @@ class LocalStorageClient(StorageClient):
         try:
             with open(result_path, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except FileNotFoundError:
+        except FileNotFoundError as e:
             logger.error(f"Result not found: {result_id}")
-            raise StorageError(f"Result not found: {result_id}")
+            raise StorageError(f"Result not found: {result_id}") from e
         except (IOError, OSError, json.JSONDecodeError) as e:
             logger.error(f"Failed to read result {result_id}: {str(e)}")
-            raise StorageError(f"Failed to read result: {str(e)}")
+            raise StorageError(f"Failed to read result: {str(e)}") from e
 
     # File Management Methods
 
@@ -281,7 +281,7 @@ class LocalStorageClient(StorageClient):
                     f.write(content_bytes)
         except (IOError, OSError) as e:
             logger.error(f"Failed to save file {filename}: {str(e)}")
-            raise StorageError(f"Failed to save file: {str(e)}")
+            raise StorageError(f"Failed to save file: {str(e)}") from e
 
         # Prepare file info
         file_info = {
@@ -304,9 +304,9 @@ class LocalStorageClient(StorageClient):
             # If metadata save fails, try to delete the file
             try:
                 os.remove(file_path)
-            except:
-                pass
-            raise StorageError(f"Failed to save file metadata: {str(e)}")
+            except FileNotFoundError as error:
+                logger.warning(f"Failed to delete file {file_path} after metadata save error: {str(error)}")
+            raise StorageError(f"Failed to save file metadata: {str(e)}") from e
 
         logger.debug(f"Saved file {filename} as {file_id}")
         return file_info
@@ -322,12 +322,12 @@ class LocalStorageClient(StorageClient):
         try:
             with open(file_path, "rb") as f:
                 return f.read()
-        except FileNotFoundError:
+        except FileNotFoundError as e:
             logger.error(f"File not found: {file_id}")
-            raise StorageError(f"File not found: {file_id}")
+            raise StorageError(f"File not found: {file_id}") from e
         except (IOError, OSError) as e:
             logger.error(f"Failed to read file {file_id}: {str(e)}")
-            raise StorageError(f"Failed to read file: {str(e)}")
+            raise StorageError(f"Failed to read file: {str(e)}") from e
 
     def list_files(
         self, page: int = 1, page_size: int = 100, sort_by: str = "uploaded_at", sort_desc: bool = True
@@ -372,12 +372,12 @@ class LocalStorageClient(StorageClient):
         try:
             with open(meta_path, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except FileNotFoundError:
+        except FileNotFoundError as e:
             logger.error(f"File metadata not found: {file_id}")
-            raise StorageError(f"File not found: {file_id}")
+            raise StorageError(f"File not found: {file_id}") from e
         except (IOError, OSError, json.JSONDecodeError) as e:
             logger.error(f"Failed to read file metadata {file_id}: {str(e)}")
-            raise StorageError(f"Failed to read file metadata: {str(e)}")
+            raise StorageError(f"Failed to read file metadata: {str(e)}") from e
 
     def delete_file(self, file_id: str) -> bool:
         """Delete a file from the local filesystem."""
@@ -426,13 +426,12 @@ class LocalStorageClient(StorageClient):
         strings = []
 
         # Function to add a string if it meets the length requirement
-        def add_string(string: str, offset: int, string_type: str):
-            if len(string) >= min_length:
-                strings.append({"string": string, "offset": offset, "string_type": string_type})
+        def add_string(string_value: str, offset: int, string_type: str):
+            if len(string_value) >= min_length:
+                strings.append({"string": string_value, "offset": offset, "string_type": string_type})
 
         # Extract ASCII strings
         if include_ascii:
-            ascii_strings = []
             for match in re.finditer(b"[\x20-\x7e]{%d,}" % min_length, file_content):
                 try:
                     string = match.group(0).decode("ascii")
