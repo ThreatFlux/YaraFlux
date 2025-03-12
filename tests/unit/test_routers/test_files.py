@@ -504,12 +504,7 @@ class TestGetHexView:
         assert "Hello World!" in result["hex_content"]
 
         # Verify storage was called with correct params
-        mock_storage.get_hex_view.assert_called_once_with(
-            file_id, 
-            offset=0, 
-            length=12, 
-            bytes_per_line=16
-        )
+        mock_storage.get_hex_view.assert_called_once_with(file_id, offset=0, length=12, bytes_per_line=16)
 
     @patch("yaraflux_mcp_server.routers.files.get_storage_client")
     def test_get_hex_view_not_found(self, mock_get_storage, client_with_user):

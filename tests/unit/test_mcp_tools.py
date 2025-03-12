@@ -366,10 +366,7 @@ class TestMcpTools:
 
         # Verify the mock was called correctly
         mock_yara_service.fetch_and_scan.assert_called_once_with(
-            url="https://example.com/test.exe",
-            rule_names=None,
-            sources=None,
-            timeout=None
+            url="https://example.com/test.exe", rule_names=None, sources=None, timeout=None
         )
 
     @patch("yaraflux_mcp_server.mcp_tools.scan_tools.yara_service")
@@ -396,10 +393,7 @@ class TestMcpTools:
 
         # Verify the mock was called correctly with parameters
         mock_yara_service.fetch_and_scan.assert_called_once_with(
-            url="https://example.com/test.exe",
-            rule_names=["rule1", "rule2"],
-            sources=["custom"],
-            timeout=10
+            url="https://example.com/test.exe", rule_names=["rule1", "rule2"], sources=["custom"], timeout=10
         )
 
     @patch("yaraflux_mcp_server.mcp_tools.scan_tools.yara_service")

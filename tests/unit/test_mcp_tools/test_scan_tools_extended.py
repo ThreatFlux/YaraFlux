@@ -46,10 +46,7 @@ def test_scan_url_success(mock_yara_service):
 
     # Verify the mock was called with all parameters
     mock_yara_service.fetch_and_scan.assert_called_once_with(
-        url="https://example.com/test.exe",
-        rule_names=["rule1", "rule2"],
-        sources=["custom", "community"],
-        timeout=30
+        url="https://example.com/test.exe", rule_names=["rule1", "rule2"], sources=["custom", "community"], timeout=30
     )
 
 
@@ -254,10 +251,10 @@ def test_scan_data_with_all_parameters(mock_yara_service):
     # Check the call arguments
     mock_yara_service.match_data.assert_called_once()
     args, kwargs = mock_yara_service.match_data.call_args
-    
+
     # Check the data was correctly decoded from base64
     decoded_data = base64.b64decode("SGVsbG8gV29ybGQ=")
-    
+
     # With keyword arguments, all parameters should be in kwargs
     assert kwargs["data"] == decoded_data
     assert kwargs["file_name"] == "test.bin"

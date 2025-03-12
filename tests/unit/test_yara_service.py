@@ -6,13 +6,13 @@ import tempfile
 from datetime import UTC, datetime
 from unittest.mock import MagicMock, Mock, patch
 
+import httpx
 import pytest
 import yara
 
 from yaraflux_mcp_server.models import YaraMatch, YaraRuleMetadata, YaraScanResult
 from yaraflux_mcp_server.storage import StorageError
 from yaraflux_mcp_server.yara_service import YaraError, YaraService, yara_service
-import httpx
 
 
 class MockYaraMatch:
@@ -327,10 +327,7 @@ def test_fetch_and_scan_success(mock_match_data, mock_client):
 
     # Test the method with named arguments
     result = service_instance.fetch_and_scan(
-        url="http://example.com/file.txt",
-        rule_names=["rule1"],
-        sources=["custom"],
-        timeout=30
+        url="http://example.com/file.txt", rule_names=["rule1"], sources=["custom"], timeout=30
     )
 
     # Verify the result
@@ -339,11 +336,7 @@ def test_fetch_and_scan_success(mock_match_data, mock_client):
     storage_mock.save_sample.assert_called_once()
     # Verify match_data was called with the correct arguments
     mock_match_data.assert_called_once_with(
-        data=b"test content", 
-        file_name="file.txt",
-        rule_names=["rule1"], 
-        sources=["custom"], 
-        timeout=30
+        data=b"test content", file_name="file.txt", rule_names=["rule1"], sources=["custom"], timeout=30
     )
 
 
@@ -362,7 +355,7 @@ def test_fetch_and_scan_with_large_file(mock_client):
     with patch("yaraflux_mcp_server.yara_service.settings") as mock_settings:
         # Set a smaller max file size for testing
         mock_settings.YARA_MAX_FILE_SIZE = 1024 * 1024  # 1MB
-        
+
         service_instance = YaraService()
 
         # Test the method - should raise YaraError for large file
@@ -378,9 +371,7 @@ def test_fetch_and_scan_http_error(mock_client):
     """Test fetch_and_scan with HTTP error."""
     # Setup mock to raise an HTTP error
     mock_client.return_value.__enter__.return_value.get.side_effect = httpx.HTTPStatusError(
-        "404 Not Found", 
-        request=Mock(), 
-        response=Mock(status_code=404)
+        "404 Not Found", request=Mock(), response=Mock(status_code=404)
     )
 
     # Create service instance

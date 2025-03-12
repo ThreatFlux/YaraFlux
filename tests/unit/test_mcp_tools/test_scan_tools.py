@@ -35,10 +35,7 @@ def test_scan_url_success(mock_yara_service):
 
     # Verify mock was called correctly with named parameters
     mock_yara_service.fetch_and_scan.assert_called_once_with(
-        url="https://example.com/test.txt",
-        rule_names=None,
-        sources=None,
-        timeout=None
+        url="https://example.com/test.txt", rule_names=None, sources=None, timeout=None
     )
 
 
@@ -60,10 +57,7 @@ def test_scan_url_with_rule_names(mock_yara_service):
 
     # Verify mock was called with named parameters including rule_names
     mock_yara_service.fetch_and_scan.assert_called_once_with(
-        url="https://example.com/test.txt",
-        rule_names=["rule1", "rule2"],
-        sources=None,
-        timeout=None
+        url="https://example.com/test.txt", rule_names=["rule1", "rule2"], sources=None, timeout=None
     )
 
 
@@ -85,10 +79,7 @@ def test_scan_url_with_timeout(mock_yara_service):
 
     # Verify mock was called with named parameters including timeout
     mock_yara_service.fetch_and_scan.assert_called_once_with(
-        url="https://example.com/test.txt",
-        rule_names=None,
-        sources=None,
-        timeout=30
+        url="https://example.com/test.txt", rule_names=None, sources=None, timeout=30
     )
 
 
