@@ -51,7 +51,7 @@ def main() -> None:
     setup_environment()
 
     # Import the MCP server (after environment setup)
-    from yaraflux_mcp_server.mcp_server import mcp # pylint: disable=import-outside-toplevel
+    from yaraflux_mcp_server.mcp_server import mcp  # pylint: disable=import-outside-toplevel
 
     # Run the MCP server
     logger.info("Running MCP server...")

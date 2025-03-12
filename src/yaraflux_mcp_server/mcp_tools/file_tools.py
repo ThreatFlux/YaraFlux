@@ -252,7 +252,9 @@ def extract_strings(
             raise ValueError("At least one string type (Unicode or ASCII) must be included")
 
         storage = get_storage_client()
-        result = storage.extract_strings(file_id, min_length, include_unicode, include_ascii, limit)
+        result = storage.extract_strings(
+            file_id, min_length=min_length, include_unicode=include_unicode, include_ascii=include_ascii, limit=limit
+        )
 
         return {
             "success": True,
@@ -313,7 +315,7 @@ def get_hex_view(
             raise ValueError("Bytes per line must be positive")
 
         storage = get_storage_client()
-        result = storage.get_hex_view(file_id, offset, length, bytes_per_line)
+        result = storage.get_hex_view(file_id, offset=offset, length=length, bytes_per_line=bytes_per_line)
 
         return {
             "success": True,

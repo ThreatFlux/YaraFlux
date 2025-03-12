@@ -480,6 +480,7 @@ class YaraService:
     def match_file(
         self,
         file_path: str,
+        *,
         rule_names: Optional[List[str]] = None,
         sources: Optional[List[str]] = None,
         timeout: Optional[int] = None,
@@ -570,6 +571,7 @@ class YaraService:
         self,
         data: Union[bytes, BinaryIO],
         file_name: str,
+        *,
         rule_names: Optional[List[str]] = None,
         sources: Optional[List[str]] = None,
         timeout: Optional[int] = None,
@@ -665,6 +667,7 @@ class YaraService:
     def fetch_and_scan(
         self,
         url: str,
+        *,
         rule_names: Optional[List[str]] = None,
         sources: Optional[List[str]] = None,
         timeout: Optional[int] = None,
@@ -721,14 +724,16 @@ class YaraService:
                         file_name = filename_match.group(1)
 
                 # Save to storage
-                file_path, file_hash = self.storage.save_sample(file_name, content)
+                file_path, file_hash = self.storage.save_sample(filename=file_name, content=content)
                 logger.info("Downloaded file saved to storage with hash: %s", file_hash)
                 # Scan the file
                 if os.path.exists(file_path):
                     # If file_path is a real file on disk, use match_file
-                    return self.match_file(file_path, rule_names, sources, timeout)
+                    return self.match_file(file_path, rule_names=rule_names, sources=sources, timeout=timeout)
                 # Otherwise, use match_data
-                return self.match_data(content, file_name, rule_names, sources, timeout)
+                return self.match_data(
+                    data=content, file_name=file_name, rule_names=rule_names, sources=sources, timeout=timeout
+                )
         except httpx.RequestError as e:
             logger.error(f"HTTP request error fetching {url}: {str(e)}")
             raise YaraError(f"Failed to fetch file: {str(e)}") from e

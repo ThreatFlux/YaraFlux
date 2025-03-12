@@ -55,14 +55,14 @@ class Settings(BaseSettings):
     PORT: int = Field(default=8000, description="Port to bind server")
 
     @field_validator("STORAGE_DIR", "YARA_RULES_DIR", "YARA_SAMPLES_DIR", "YARA_RESULTS_DIR", mode="before")
-    def ensure_path_exists(cls, v: Any) -> Path: # pylint: disable=no-self-argument
+    def ensure_path_exists(cls, v: Any) -> Path:  # pylint: disable=no-self-argument
         """Ensure paths exist and are valid."""
         path = Path(v)
         os.makedirs(path, exist_ok=True)
         return path
 
     @field_validator("USE_MINIO", "MINIO_ENDPOINT", "MINIO_ACCESS_KEY", "MINIO_SECRET_KEY")
-    def validate_minio_settings(cls, v: Any, info: Dict[str, Any]) -> Any: # pylint: disable=no-self-argument
+    def validate_minio_settings(cls, v: Any, info: Dict[str, Any]) -> Any:  # pylint: disable=no-self-argument
         """Validate MinIO settings if USE_MINIO is True."""
         field_name = info.field_name
         data = info.data

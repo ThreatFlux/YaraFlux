@@ -133,6 +133,7 @@ class MinioStorageClient(StorageClient):
     def extract_strings(
         self,
         file_id: str,
+        *,
         min_length: int = 4,
         include_unicode: bool = True,
         include_ascii: bool = True,
@@ -141,6 +142,6 @@ class MinioStorageClient(StorageClient):
         raise NotImplementedError("MinIO storage client is not fully implemented yet")
 
     def get_hex_view(
-        self, file_id: str, offset: int = 0, length: Optional[int] = None, bytes_per_line: int = 16
+        self, file_id: str, *, offset: int = 0, length: Optional[int] = None, bytes_per_line: int = 16
     ) -> Dict[str, Any]:
         raise NotImplementedError("MinIO storage client is not fully implemented yet")

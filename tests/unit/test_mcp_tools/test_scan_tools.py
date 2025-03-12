@@ -33,10 +33,13 @@ def test_scan_url_success(mock_yara_service):
     # Verify results
     assert result["success"] is True
 
-    # Verify mock was called correctly - without specifying exact parameters
-    # as we don't know the full function signature
-    assert mock_yara_service.fetch_and_scan.called
-    assert mock_yara_service.fetch_and_scan.call_args[0][0] == "https://example.com/test.txt"
+    # Verify mock was called correctly with named parameters
+    mock_yara_service.fetch_and_scan.assert_called_once_with(
+        url="https://example.com/test.txt",
+        rule_names=None,
+        sources=None,
+        timeout=None
+    )
 
 
 @patch("yaraflux_mcp_server.mcp_tools.scan_tools.yara_service")
@@ -55,18 +58,13 @@ def test_scan_url_with_rule_names(mock_yara_service):
     # Verify results
     assert result["success"] is True
 
-    # Verify mock was called with rule names
-    # Without assuming exact function signature
-    assert mock_yara_service.fetch_and_scan.called
-    call_args = mock_yara_service.fetch_and_scan.call_args[0]
-    assert call_args[0] == "https://example.com/test.txt"
-    # Rule names should be somewhere in the arguments
-    rule_names_passed = False
-    for arg in call_args:
-        if arg == ["rule1", "rule2"]:
-            rule_names_passed = True
-            break
-    assert rule_names_passed
+    # Verify mock was called with named parameters including rule_names
+    mock_yara_service.fetch_and_scan.assert_called_once_with(
+        url="https://example.com/test.txt",
+        rule_names=["rule1", "rule2"],
+        sources=None,
+        timeout=None
+    )
 
 
 @patch("yaraflux_mcp_server.mcp_tools.scan_tools.yara_service")
@@ -85,8 +83,13 @@ def test_scan_url_with_timeout(mock_yara_service):
     # Verify results
     assert result["success"] is True
 
-    # Without knowing exact signature, we just verify the function was called
-    assert mock_yara_service.fetch_and_scan.called
+    # Verify mock was called with named parameters including timeout
+    mock_yara_service.fetch_and_scan.assert_called_once_with(
+        url="https://example.com/test.txt",
+        rule_names=None,
+        sources=None,
+        timeout=30
+    )
 
 
 @patch("yaraflux_mcp_server.mcp_tools.scan_tools.yara_service")

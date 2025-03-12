@@ -46,7 +46,10 @@ def test_scan_url_success(mock_yara_service):
 
     # Verify the mock was called with all parameters
     mock_yara_service.fetch_and_scan.assert_called_once_with(
-        "https://example.com/test.exe", ["rule1", "rule2"], ["custom", "community"], 30
+        url="https://example.com/test.exe",
+        rule_names=["rule1", "rule2"],
+        sources=["custom", "community"],
+        timeout=30
     )
 
 
@@ -248,16 +251,19 @@ def test_scan_data_with_all_parameters(mock_yara_service):
     assert result["success"] is True
 
     # Verify the mock was called with the correct parameters
-    # The first arg is the decoded data, which we check separately
+    # Check the call arguments
+    mock_yara_service.match_data.assert_called_once()
     args, kwargs = mock_yara_service.match_data.call_args
-    assert args[1] == "test.bin"  # filename
-    assert args[2] == ["rule1", "rule2"]  # rule_names
-    assert args[3] == ["custom", "community"]  # sources
-    assert args[4] == 30  # timeout
-
-    # Verify the data was correctly decoded from base64
+    
+    # Check the data was correctly decoded from base64
     decoded_data = base64.b64decode("SGVsbG8gV29ybGQ=")
-    assert args[0] == decoded_data
+    
+    # With keyword arguments, all parameters should be in kwargs
+    assert kwargs["data"] == decoded_data
+    assert kwargs["file_name"] == "test.bin"
+    assert kwargs["rule_names"] == ["rule1", "rule2"]
+    assert kwargs["sources"] == ["custom", "community"]
+    assert kwargs["timeout"] == 30
 
 
 @patch("yaraflux_mcp_server.mcp_tools.scan_tools.yara_service")

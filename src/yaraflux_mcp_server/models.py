@@ -114,7 +114,7 @@ class YaraRuleCreate(BaseModel):
     content_type: Optional[str] = "yara"  # Can be 'yara' or 'json'
 
     @field_validator("name")
-    def name_must_be_valid(cls, v: str) -> str: # pylint: disable=no-self-argument
+    def name_must_be_valid(cls, v: str) -> str:  # pylint: disable=no-self-argument
         """Validate rule name."""
         if not v or not v.strip():
             raise ValueError("name cannot be empty")
@@ -131,7 +131,7 @@ class ScanRequest(BaseModel):
     timeout: Optional[int] = None  # Scan timeout in seconds
 
     @field_validator("rule_names")
-    def validate_rule_names(cls, v: Optional[List[str]]) -> Optional[List[str]]: # pylint: disable=no-self-argument
+    def validate_rule_names(cls, v: Optional[List[str]]) -> Optional[List[str]]:  # pylint: disable=no-self-argument
         """Validate rule names."""
         if v is not None and len(v) == 0:
             return None  # Empty list is treated as None (use all rules)

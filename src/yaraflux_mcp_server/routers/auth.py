@@ -155,6 +155,7 @@ async def remove_user(username: str, current_user: User = Depends(validate_admin
 @router.put("/users/{username}")
 async def update_user_info(
     username: str,
+    *,
     role: Optional[UserRole] = None,
     email: Optional[str] = None,
     disabled: Optional[bool] = None,

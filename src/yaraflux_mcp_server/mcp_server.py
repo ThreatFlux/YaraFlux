@@ -236,7 +236,7 @@ def run_server(transport_mode="http"):
                     await list_registered_tools()
 
                     # Now run the server
-                    # noinspection PyProtectedMember
+                    # pylint: disable=protected-access
                     await mcp._mcp_server.run(
                         read_stream, write_stream, mcp._mcp_server.create_initialization_options()
                     )  # pylint: disable=protected-access

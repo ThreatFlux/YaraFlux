@@ -223,6 +223,7 @@ def log_entry_exit(logger: Optional[logging.Logger] = None, level: int = logging
 
 def configure_logging(
     log_level: str = "INFO",
+    *,
     log_file: Optional[str] = None,
     enable_json: bool = True,
     log_to_console: bool = True,

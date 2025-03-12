@@ -12,6 +12,7 @@ import yara
 from yaraflux_mcp_server.models import YaraMatch, YaraRuleMetadata, YaraScanResult
 from yaraflux_mcp_server.storage import StorageError
 from yaraflux_mcp_server.yara_service import YaraError, YaraService, yara_service
+import httpx
 
 
 class MockYaraMatch:
@@ -297,3 +298,100 @@ def test_match_data(mock_collect_rules, mock_compile):
     args, kwargs = mock_rule.match.call_args
     assert "data" in kwargs
     assert kwargs["data"] == data
+
+
+@patch("httpx.Client")
+@patch("yaraflux_mcp_server.yara_service.YaraService.match_data")
+def test_fetch_and_scan_success(mock_match_data, mock_client):
+    """Test successful URL fetch and scan."""
+    # Setup mock response
+    mock_response = Mock()
+    mock_response.content = b"test content"
+    mock_response.headers = {}
+    mock_response.raise_for_status = Mock()
+    mock_client.return_value.__enter__.return_value.get.return_value = mock_response
+
+    # Create mock for match_data result
+    mock_result = Mock()
+    mock_result.scan_id = "test-scan-id"
+    mock_result.file_name = "test.txt"
+    mock_result.file_size = 12
+    mock_result.file_hash = "test-hash"
+    mock_result.matches = []
+    mock_match_data.return_value = mock_result
+
+    # Create service instance
+    storage_mock = MagicMock()
+    storage_mock.save_sample.return_value = ("/tmp/test_path", "test_hash")
+    service_instance = YaraService(storage_client=storage_mock)
+
+    # Test the method with named arguments
+    result = service_instance.fetch_and_scan(
+        url="http://example.com/file.txt",
+        rule_names=["rule1"],
+        sources=["custom"],
+        timeout=30
+    )
+
+    # Verify the result
+    assert result == mock_result
+    mock_client.return_value.__enter__.return_value.get.assert_called_once()
+    storage_mock.save_sample.assert_called_once()
+    # Verify match_data was called with the correct arguments
+    mock_match_data.assert_called_once_with(
+        data=b"test content", 
+        file_name="file.txt",
+        rule_names=["rule1"], 
+        sources=["custom"], 
+        timeout=30
+    )
+
+
+@patch("httpx.Client")
+def test_fetch_and_scan_with_large_file(mock_client):
+    """Test fetch_and_scan with file exceeding size limit."""
+    # Setup mock response with large content
+    mock_response = Mock()
+    # Create content that exceeds the default max file size
+    mock_response.content = b"x" * (10 * 1024 * 1024)  # 10MB
+    mock_response.headers = {}
+    mock_response.raise_for_status = Mock()
+    mock_client.return_value.__enter__.return_value.get.return_value = mock_response
+
+    # Create service instance with patched settings
+    with patch("yaraflux_mcp_server.yara_service.settings") as mock_settings:
+        # Set a smaller max file size for testing
+        mock_settings.YARA_MAX_FILE_SIZE = 1024 * 1024  # 1MB
+        
+        service_instance = YaraService()
+
+        # Test the method - should raise YaraError for large file
+        with pytest.raises(YaraError) as exc_info:
+            service_instance.fetch_and_scan(url="http://example.com/large-file.bin")
+
+        # Verify the error message
+        assert "file too large" in str(exc_info.value).lower()
+
+
+@patch("httpx.Client")
+def test_fetch_and_scan_http_error(mock_client):
+    """Test fetch_and_scan with HTTP error."""
+    # Setup mock to raise an HTTP error
+    mock_client.return_value.__enter__.return_value.get.side_effect = httpx.HTTPStatusError(
+        "404 Not Found", 
+        request=Mock(), 
+        response=Mock(status_code=404)
+    )
+
+    # Create service instance
+    storage_mock = MagicMock()
+    service_instance = YaraService(storage_client=storage_mock)
+
+    # Test the method - should raise YaraError
+    with pytest.raises(YaraError) as exc_info:
+        service_instance.fetch_and_scan(url="http://example.com/not-found.txt")
+
+    # Verify the error message
+    assert "http 404" in str(exc_info.value).lower()
+    # Verify storage.save_sample was not called
+    storage_mock.save_sample.assert_not_called()

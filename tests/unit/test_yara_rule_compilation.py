@@ -552,14 +552,14 @@ class TestFetchAndScan:
         # Use a context manager to safely patch just during the test
         with patch.object(service, "match_file", side_effect=mock_match_file_impl):
             # Act: Run the function and validate it doesn't raise exceptions
-            result = service.fetch_and_scan(url)
+            result = service.fetch_and_scan(url=url)
 
             # Verify basics without being too strict about the exact result
             assert result is not None
             assert hasattr(result, "scan_id")
             assert hasattr(result, "file_name")
             mock_client_instance.get.assert_called_with(url, follow_redirects=True)
-            mock_storage.save_sample.assert_called_with("file.txt", content)
+            mock_storage.save_sample.assert_called_with(filename="file.txt", content=content)
 
     def test_fetch_and_scan_download_error(self, mock_client, service):
         """Test handling of HTTP download errors."""
@@ -573,7 +573,7 @@ class TestFetchAndScan:
 
         # Act & Assert: Should raise YaraError
         with pytest.raises(YaraError, match="Failed to fetch file"):
-            service.fetch_and_scan(url)
+            service.fetch_and_scan(url=url)
 
     def test_fetch_and_scan_http_status_error(self, mock_client, service):
         """Test handling of HTTP status errors."""
@@ -592,7 +592,7 @@ class TestFetchAndScan:
 
         # Act & Assert: Should raise YaraError
         with pytest.raises(YaraError, match="Failed to fetch file: HTTP 404"):
-            service.fetch_and_scan(url)
+            service.fetch_and_scan(url=url)
 
     def test_fetch_and_scan_file_too_large(self, mock_client, service):
         """Test handling of files larger than the maximum allowed size."""
@@ -613,7 +613,7 @@ class TestFetchAndScan:
 
         # Act & Assert: Should raise YaraError
         with pytest.raises(YaraError, match="Downloaded file too large"):
-            service.fetch_and_scan(url)
+            service.fetch_and_scan(url=url)
 
     def test_fetch_and_scan_content_disposition(self, mock_client, service, mock_storage):
         """Test extracting filename from Content-Disposition header."""
@@ -641,7 +641,7 @@ class TestFetchAndScan:
         # from the Content-Disposition header
         with patch.object(service, "match_file", return_value=Mock()):
             # Act: Fetch and scan
-            service.fetch_and_scan(url)
+            service.fetch_and_scan(url=url)
 
             # Verify: Should use filename from Content-Disposition
-            mock_storage.save_sample.assert_called_with("report.pdf", content)
+            mock_storage.save_sample.assert_called_with(filename="report.pdf", content=content)

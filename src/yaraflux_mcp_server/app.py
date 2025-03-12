@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> None: # pylint: disable=unused-argument disable=redefined-outer-name
+async def lifespan(app: FastAPI) -> None:  # pylint: disable=unused-argument disable=redefined-outer-name
     """
     Lifespan context manager for FastAPI application.
 
@@ -84,7 +84,7 @@ def create_app() -> FastAPI:
         Configured FastAPI application
     """
     # Create FastAPI app with lifespan
-    app = FastAPI( # pylint: disable=redefined-outer-name
+    app = FastAPI(  # pylint: disable=redefined-outer-name
         title="YaraFlux MCP Server",
         description="Model Context Protocol server for YARA scanning",
         version="0.1.0",
@@ -94,7 +94,7 @@ def create_app() -> FastAPI:
     # Add CORS middleware
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # In production, restrict this to known origins
+        allow_origins=["*"],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

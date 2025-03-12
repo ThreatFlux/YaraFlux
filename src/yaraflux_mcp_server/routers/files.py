@@ -248,7 +248,11 @@ async def extract_strings(file_id: UUID, request: FileStringsRequest):
     try:
         storage = get_storage_client()
         result = storage.extract_strings(
-            str(file_id), request.min_length, request.include_unicode, request.include_ascii, request.limit
+            str(file_id),
+            min_length=request.min_length,
+            include_unicode=request.include_unicode,
+            include_ascii=request.include_ascii,
+            limit=request.limit,
         )
 
         # Convert strings to response model format
@@ -286,7 +290,9 @@ async def get_hex_view(file_id: UUID, request: FileHexRequest):
     """Get hexadecimal view of file content."""
     try:
         storage = get_storage_client()
-        result = storage.get_hex_view(str(file_id), request.offset, request.length, request.bytes_per_line)
+        result = storage.get_hex_view(
+            str(file_id), offset=request.offset, length=request.length, bytes_per_line=request.bytes_per_line
+        )
 
         response = FileHexResponse(
             file_id=UUID(result["file_id"]),

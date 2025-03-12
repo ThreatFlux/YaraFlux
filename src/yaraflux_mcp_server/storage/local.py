@@ -412,6 +412,7 @@ class LocalStorageClient(StorageClient):
     def extract_strings(
         self,
         file_id: str,
+        *,
         min_length: int = 4,
         include_unicode: bool = True,
         include_ascii: bool = True,
@@ -464,7 +465,7 @@ class LocalStorageClient(StorageClient):
         }
 
     def get_hex_view(
-        self, file_id: str, offset: int = 0, length: Optional[int] = None, bytes_per_line: int = 16
+        self, file_id: str, *, offset: int = 0, length: Optional[int] = None, bytes_per_line: int = 16
     ) -> Dict[str, Any]:
         """Get hexadecimal view of file content from the local filesystem."""
         # Get file content
@@ -501,12 +502,12 @@ class LocalStorageClient(StorageClient):
 
         # Combine hex and ASCII if requested
         lines = []
-        for i in range(len(hex_lines)):
+        for i, hex_line in enumerate(hex_lines):
             offset_str = f"{offset + i * bytes_per_line:08x}"
-            if len(hex_lines[i]) < bytes_per_line * 3:  # Pad last line
-                hex_lines[i] = hex_lines[i].ljust(bytes_per_line * 3 - 1)
+            if len(hex_line) < bytes_per_line * 3:  # Pad last line
+                hex_line = hex_line.ljust(bytes_per_line * 3 - 1)
 
-            line = f"{offset_str}  {hex_lines[i]}"
+            line = f"{offset_str}  {hex_line}"
             if ascii_lines:
                 line += f"  |{ascii_lines[i]}|"
             lines.append(line)

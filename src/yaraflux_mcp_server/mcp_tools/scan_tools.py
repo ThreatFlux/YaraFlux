@@ -43,7 +43,7 @@ def scan_url(
     """
     try:
         # Fetch and scan the file
-        result = yara_service.fetch_and_scan(url, rule_names, sources, timeout)
+        result = yara_service.fetch_and_scan(url=url, rule_names=rule_names, sources=sources, timeout=timeout)
 
         return {
             "success": True,
@@ -68,6 +68,7 @@ def scan_url(
 def scan_data(
     data: str,
     filename: str,
+    *,
     encoding: str = "base64",
     rule_names: Optional[List[str]] = None,
     sources: Optional[List[str]] = None,
@@ -124,7 +125,9 @@ def scan_data(
             decoded_data = data.encode("utf-8")
 
         # Scan the data
-        result = yara_service.match_data(decoded_data, filename, rule_names, sources, timeout)
+        result = yara_service.match_data(
+            data=decoded_data, file_name=filename, rule_names=rule_names, sources=sources, timeout=timeout
+        )
 
         return {
             "success": True,
