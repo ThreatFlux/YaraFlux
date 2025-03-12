@@ -8,7 +8,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> None: # pylint: disable=unused-argument disable=redefined-outer-name
     """
     Lifespan context manager for FastAPI application.
 
@@ -31,6 +31,8 @@ async def lifespan(app: FastAPI):
 
     This replaces the deprecated @app.on_event handlers and manages the application lifecycle.
     """
+    if app:
+        logger.info("App found")
     # ===== Startup operations =====
     logger.info("Starting YaraFlux MCP Server")
 
@@ -82,7 +84,7 @@ def create_app() -> FastAPI:
         Configured FastAPI application
     """
     # Create FastAPI app with lifespan
-    app = FastAPI(
+    app = FastAPI( # pylint: disable=redefined-outer-name
         title="YaraFlux MCP Server",
         description="Model Context Protocol server for YARA scanning",
         version="0.1.0",
@@ -111,7 +113,12 @@ def create_app() -> FastAPI:
     # Add API routers
     # Import routers here to avoid circular imports
     try:
-        from yaraflux_mcp_server.routers import auth_router, files_router, rules_router, scan_router
+        from yaraflux_mcp_server.routers import (  # pylint: disable=import-outside-toplevel
+            auth_router,
+            files_router,
+            rules_router,
+            scan_router,
+        )
 
         app.include_router(auth_router, prefix=settings.API_PREFIX)
         app.include_router(rules_router, prefix=settings.API_PREFIX)
@@ -119,15 +126,15 @@ def create_app() -> FastAPI:
         app.include_router(files_router, prefix=settings.API_PREFIX)
         logger.info("API routers initialized")
     except Exception as e:
-        logger.error(f"Error initializing API routers: {str(e)}")
+        logger.error(f"Error initializing API routers: {str(e)}")  # pylint: disable=logging-fstring-interpolation
 
     # Add MCP router
     try:
         # Import both MCP tools modules
-        import yaraflux_mcp_server.mcp_tools  # New modular Claude MCP tools
+        import yaraflux_mcp_server.mcp_tools  # pylint: disable=import-outside-toplevel disable=unused-import
 
         # Initialize Claude MCP tools with FastAPI
-        from yaraflux_mcp_server.claude_mcp import init_fastapi
+        from yaraflux_mcp_server.claude_mcp import init_fastapi  # pylint: disable=import-outside-toplevel
 
         init_fastapi(app)
 

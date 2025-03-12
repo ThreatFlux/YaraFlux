@@ -91,7 +91,9 @@ async def upload_file(
         return response
     except Exception as e:
         logger.error(f"Error uploading file: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error uploading file: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error uploading file: {str(e)}"
+        ) from e
 
 
 @router.get("/info/{file_id}", response_model=FileInfo)

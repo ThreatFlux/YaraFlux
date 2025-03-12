@@ -59,7 +59,7 @@ except Exception as e:
         except Exception as error:
             return {"valid": False, "message": str(error)}
 
-    def import_rules_tool(url: Optional[str] = None, branch: str = "main"):
+    def import_rules_tool(url: Optional[str] = None):
         # Simple import implementation
         url_msg = f" from {url}" if url else ""
         return {"success": False, "message": f"MCP tools not available for import{url_msg}"}
@@ -307,12 +307,11 @@ async def delete_rule(rule_name: str, source: str = "custom", current_user: User
 
 
 @router.post("/import")
-async def import_rules(url: Optional[str] = None, branch: str = "master", current_user: User = Depends(validate_admin)):
+async def import_rules(url: Optional[str] = None, current_user: User = Depends(validate_admin)):
     """Import ThreatFlux YARA rules from GitHub.
 
     Args:
         url: URL to the GitHub repository
-        branch: Branch name to import from
         current_user: Current authenticated admin user
 
     Returns:
@@ -322,7 +321,7 @@ async def import_rules(url: Optional[str] = None, branch: str = "master", curren
         HTTPException: If import fails
     """
     try:
-        result = import_rules_tool(url, branch)
+        result = import_rules_tool(url)
 
         if not result.get("success"):
             raise HTTPException(

@@ -48,7 +48,7 @@ class UserInDB(User):
     """User model as stored in database with hashed password."""
 
     hashed_password: str
-    created: datetime = Field(default_factory=lambda: datetime.now())
+    created: datetime = Field(datetime.now())
     last_login: Optional[datetime] = None
 
 
@@ -114,7 +114,7 @@ class YaraRuleCreate(BaseModel):
     content_type: Optional[str] = "yara"  # Can be 'yara' or 'json'
 
     @field_validator("name")
-    def name_must_be_valid(cls, v: str) -> str:
+    def name_must_be_valid(cls, v: str) -> str: # pylint: disable=no-self-argument
         """Validate rule name."""
         if not v or not v.strip():
             raise ValueError("name cannot be empty")
@@ -131,7 +131,7 @@ class ScanRequest(BaseModel):
     timeout: Optional[int] = None  # Scan timeout in seconds
 
     @field_validator("rule_names")
-    def validate_rule_names(cls, v: Optional[List[str]]) -> Optional[List[str]]:
+    def validate_rule_names(cls, v: Optional[List[str]]) -> Optional[List[str]]: # pylint: disable=no-self-argument
         """Validate rule names."""
         if v is not None and len(v) == 0:
             return None  # Empty list is treated as None (use all rules)

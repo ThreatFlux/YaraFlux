@@ -239,7 +239,7 @@ def run_server(transport_mode="http"):
                     # noinspection PyProtectedMember
                     await mcp._mcp_server.run(
                         read_stream, write_stream, mcp._mcp_server.create_initialization_options()
-                    )
+                    )  # pylint: disable=protected-access
 
             asyncio.run(run_stdio())
         else:

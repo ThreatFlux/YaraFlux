@@ -30,8 +30,6 @@ logger = logging.getLogger(__name__)
 class YaraError(Exception):
     """Custom exception for YARA-related errors."""
 
-    pass
-
 
 class YaraService:
     """Service for YARA rule compilation, management, and scanning."""
@@ -135,10 +133,10 @@ class YaraService:
             return compiled_rule
         except yara.Error as e:
             logger.error(f"YARA compilation error for rule {rule_name}: {str(e)}")
-            raise YaraError(f"Failed to compile rule {rule_name}: {str(e)}")
+            raise YaraError(f"Failed to compile rule {rule_name}: {str(e)}") from e
         except StorageError as e:
             logger.error(f"Storage error getting rule {rule_name}: {str(e)}")
-            raise YaraError(f"Failed to load rule {rule_name}: {str(e)}")
+            raise YaraError(f"Failed to load rule {rule_name}: {str(e)}") from e
 
     def _compile_community_rules(self) -> yara.Rules:
         """Compile all community YARA rules as a single ruleset.
@@ -187,10 +185,10 @@ class YaraService:
             return compiled_rule
         except yara.Error as e:
             logger.error(f"YARA compilation error for community rules: {str(e)}")
-            raise YaraError(f"Failed to compile community rules: {str(e)}")
+            raise YaraError(f"Failed to compile community rules: {str(e)}") from e
         except StorageError as e:
             logger.error(f"Storage error getting community rules: {str(e)}")
-            raise YaraError(f"Failed to load community rules: {str(e)}")
+            raise YaraError(f"Failed to load community rules: {str(e)}") from e
 
     def _register_include_callback(self, source: str, rule_name: str) -> None:
         """Register an include callback for a rule.
@@ -233,10 +231,10 @@ class YaraService:
                         if source != "community":
                             include_content = self.storage.get_rule(requested_filename, "community")
                             return include_content.encode("utf-8")
-                    except StorageError:
+                    except StorageError as e:
                         # If not found anywhere, raise an error
                         logger.warning(f"Include file not found: {requested_filename}")
-                        raise yara.Error(f"Include file not found: {requested_filename}")
+                        raise yara.Error(f"Include file not found: {requested_filename}") from e
 
             # If all attempts fail, raise an error
             raise yara.Error(f"Include file not found: {requested_filename}")
@@ -314,7 +312,7 @@ class YaraService:
             )
         except yara.Error as e:
             logger.error(f"YARA validation error for rule {rule_name}: {str(e)}")
-            raise YaraError(f"Invalid YARA rule: {str(e)}")
+            raise YaraError(f"Invalid YARA rule: {str(e)}") from e
 
         # Save the rule
         try:
@@ -330,7 +328,7 @@ class YaraService:
             return YaraRuleMetadata(name=rule_name, source=source, created=datetime.now(UTC), is_compiled=True)
         except StorageError as e:
             logger.error(f"Storage error saving rule {rule_name}: {str(e)}")
-            raise YaraError(f"Failed to save rule: {str(e)}")
+            raise YaraError(f"Failed to save rule: {str(e)}") from e
 
     def update_rule(self, rule_name: str, content: str, source: str = "custom") -> YaraRuleMetadata:
         """Update an existing YARA rule.
@@ -724,7 +722,7 @@ class YaraService:
 
                 # Save to storage
                 file_path, file_hash = self.storage.save_sample(file_name, content)
-
+                logger.info("Downloaded file saved to storage with hash: %s", file_hash)
                 # Scan the file
                 if os.path.exists(file_path):
                     # If file_path is a real file on disk, use match_file

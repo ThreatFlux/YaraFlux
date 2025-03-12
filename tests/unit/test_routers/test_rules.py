@@ -473,7 +473,7 @@ class TestImportRules:
         assert result["imported"] == 10
 
         # Verify tool was called with default parameters
-        mock_import_tool.assert_called_once_with(None, "master")
+        mock_import_tool.assert_called_once_with(None)
 
     @patch("yaraflux_mcp_server.routers.rules.import_rules_tool")
     def test_import_rules_with_params(self, mock_import_tool, client_with_admin):
@@ -488,7 +488,7 @@ class TestImportRules:
         assert response.status_code == 200
 
         # Verify tool was called with custom parameters
-        mock_import_tool.assert_called_once_with("https://example.com/repo", "develop")
+        mock_import_tool.assert_called_once_with("https://example.com/repo")
 
     @patch("yaraflux_mcp_server.routers.rules.import_rules_tool")
     def test_import_rules_failure(self, mock_import_tool, client_with_admin):

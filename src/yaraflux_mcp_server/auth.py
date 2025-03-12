@@ -16,7 +16,6 @@ from passlib.context import CryptContext
 
 from yaraflux_mcp_server.config import settings
 from yaraflux_mcp_server.models import TokenData, User, UserInDB, UserRole
-from yaraflux_mcp_server.storage.base import StorageClient
 
 # Configuration constants
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
