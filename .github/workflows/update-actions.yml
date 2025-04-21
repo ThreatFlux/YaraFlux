@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       - name: Update GitHub Actions
-        uses: ThreatFlux/githubWorkFlowChecker@b85ebeb97aebf83af4773d96738922a065a77037  # v1.20250408.1
+        uses: ThreatFlux/githubWorkFlowChecker@77ce48e4752c1c1dc52fb67138d9d5558d604370  # v1.20250420.1
         with:
           owner: ${{ github.repository_owner }}
           repo-name: ${{ github.event.repository.name }}
