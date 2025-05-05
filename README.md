@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/threatflux-yaraflux-badge.png)](https://mseep.ai/app/threatflux-yaraflux)
+
 # YaraFlux MCP Server
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/ThreatFlux/YaraFlux)](https://github.com/ThreatFlux/YaraFlux/releases)
 [![CI](https://github.com/ThreatFlux/YaraFlux/workflows/CI/badge.svg)](https://github.com/ThreatFlux/YaraFlux/actions)
