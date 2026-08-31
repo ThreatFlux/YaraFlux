@@ -1,11 +1,24 @@
-name:  Workflow for Safety Action
+name: Dependency Vulnerability Scan
 on: push
+
+permissions:
+  contents: read
+
 jobs:
   security:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
-      - name: Run Safety CLI to check for vulnerabilities
-        uses: pyupio/safety-action@2591cf2f3e67ba68b923f4c92f0d36e281c65023  # v1.0.1
+      - name: Run pip-audit to check for vulnerabilities
+        uses: pypa/gh-action-pip-audit@1220774d901786e6f652ae159f7b6bc8fea6d266  # v1.1.0
         with:
-          api-key: ${{ secrets.SAFETY_API_KEY }}
+          inputs: requirements.txt requirements-dev.txt
+          # GHSA-wj6h-64fc-37mp (aka CVE-2024-23342 / PYSEC-2026-1325): Minerva timing
+          # attack on P-256 in python-ecdsa. `ecdsa` is a hard transitive dependency of
+          # python-jose (`ecdsa!=0.15`), every published version is affected, and upstream
+          # has declared side-channel attacks out of scope with no planned fix -- so there
+          # is no version to upgrade to. YaraFlux signs JWTs with HS256 (symmetric, see
+          # config.JWT_ALGORITHM) through the `cryptography` backend and never calls the
+          # affected ECDSA APIs. Drop this ignore if a fixed `ecdsa` release ever ships,
+          # if python-jose stops requiring it, or if JWT_ALGORITHM moves to an EC curve.
+          ignore-vulns: GHSA-wj6h-64fc-37mp
