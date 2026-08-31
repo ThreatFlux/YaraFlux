@@ -111,7 +111,11 @@ install: check-deps
 			pip install uv; \
 		fi; \
 	fi
-	$(UV) venv --python $(PYTHON_VERSION)
+	@if [ -d "$(VENV)" ]; then \
+		echo "Virtual environment already exists at $(VENV), reusing it."; \
+	else \
+		$(UV) venv --python $(PYTHON_VERSION); \
+	fi
 
 	# Set environment variables for compilation if needed
 	@if [ "$(OS)" = "Darwin" ] && brew --prefix openssl >/dev/null 2>&1; then \
