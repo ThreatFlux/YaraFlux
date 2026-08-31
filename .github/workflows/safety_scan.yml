@@ -2,17 +2,26 @@ name: Dependency Vulnerability Scan
 # `push` alone never fires for a pull request opened from a fork, so the audit
 # and lock-drift gates below could not see exactly the contributions most in
 # need of them. `pull_request` runs both against the PR merge commit.
+#
+# `push` is scoped to the integration branches (matching ci.yml) rather than
+# left unfiltered: an unfiltered `push` plus `pull_request` runs the whole scan
+# twice for every same-repo PR branch. This way each commit is scanned once --
+# on its PR before merge, and on main/develop after.
 on:
   push:
+    branches: [ main, develop ]
   pull_request:
+    branches: [ main, develop ]
 
 permissions:
   contents: read
 
 concurrency:
-  # A same-repo branch with an open PR fires both `push` and `pull_request`;
-  # collapse the pair so the same tree is not audited twice in parallel.
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  # Supersede an in-flight scan when a branch is pushed again. head_ref is set
+  # for pull_request and empty for push, so pair it with ref_name (the short
+  # branch name) -- github.ref would be "refs/heads/x" here and "x" there, and
+  # the two would never land in the same group.
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
