@@ -111,7 +111,7 @@ install: check-deps
 			pip install uv; \
 		fi; \
 	fi
-	$(UV) venv --python $(PYTHON_VERSION)
+	$(UV) venv --python $(PYTHON_VERSION) --allow-existing
 
 	# Set environment variables for compilation if needed
 	@if [ "$(OS)" = "Darwin" ] && brew --prefix openssl >/dev/null 2>&1; then \
