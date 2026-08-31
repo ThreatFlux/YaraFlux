@@ -111,6 +111,13 @@ install: check-deps
 			pip install uv; \
 		fi; \
 	fi
+# ci.yml runs `make install` and then `make dev-setup`, and dev-setup declares
+# install as a prerequisite -- so this target runs twice per job. uv >=0.12
+# hard-errors on a second `uv venv` ("A virtual environment already exists"),
+# which is what turned ci.yml red. --allow-existing reuses the venv in place:
+# it keeps the packages the first pass installed (unlike --clear/UV_VENV_CLEAR,
+# which would wipe them) and it still repairs a partial or broken .venv, which
+# a plain `[ -d .venv ]` guard would silently hand to `uv pip install` to fail on.
 	$(UV) venv --python $(PYTHON_VERSION) --allow-existing
 
 	# Set environment variables for compilation if needed
