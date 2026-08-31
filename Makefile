@@ -111,7 +111,14 @@ install: check-deps
 			pip install uv; \
 		fi; \
 	fi
-	$(UV) venv --python $(PYTHON_VERSION)
+# ci.yml runs `make install` and then `make dev-setup`, and dev-setup declares
+# install as a prerequisite -- so this target runs twice per job. uv >=0.12
+# hard-errors on a second `uv venv` ("A virtual environment already exists"),
+# which is what turned ci.yml red. --allow-existing reuses the venv in place:
+# it keeps the packages the first pass installed (unlike --clear/UV_VENV_CLEAR,
+# which would wipe them) and it still repairs a partial or broken .venv, which
+# a plain `[ -d .venv ]` guard would silently hand to `uv pip install` to fail on.
+	$(UV) venv --python $(PYTHON_VERSION) --allow-existing
 
 	# Set environment variables for compilation if needed
 	@if [ "$(OS)" = "Darwin" ] && brew --prefix openssl >/dev/null 2>&1; then \
@@ -145,6 +152,15 @@ lock: lock-requirements
 # given uv version and lock state; CI's drift check pins uv, so use the same
 # version it does (see safety_scan.yml) if the check complains.
 lock-requirements:
+	@command -v $(UV) >/dev/null 2>&1 || { \
+		echo "error: '$(UV)' was not found on PATH."; \
+		echo "  'make lock-requirements' compiles the locks with uv and cannot run without it."; \
+		echo "  Install uv, then re-run. To match CI byte-for-byte, use the version"; \
+		echo "  pinned by the lock-drift job in .github/workflows/safety_scan.yml:"; \
+		echo "      pip install uv==<pinned-version>"; \
+		echo "  or, for a standalone install:  curl -LsSf https://astral.sh/uv/install.sh | sh"; \
+		exit 1; \
+	}
 	@echo "Regenerating hash-pinned requirement locks from pyproject.toml..."
 	$(UV) pip compile pyproject.toml -c requirements.txt --universal --generate-hashes \
 		--python-version $(PYTHON_VERSION) --custom-compile-command "make lock-requirements" \

@@ -1,14 +1,34 @@
 name: Dependency Vulnerability Scan
-on: push
+# `push` alone never fires for a pull request opened from a fork, so the audit
+# and lock-drift gates below could not see exactly the contributions most in
+# need of them. `pull_request` runs both against the PR merge commit.
+#
+# `push` is scoped to the integration branches (matching ci.yml) rather than
+# left unfiltered: an unfiltered `push` plus `pull_request` runs the whole scan
+# twice for every same-repo PR branch. This way each commit is scanned once --
+# on its PR before merge, and on main/develop after.
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
 
 permissions:
   contents: read
+
+concurrency:
+  # Supersede an in-flight scan when a branch is pushed again. head_ref is set
+  # for pull_request and empty for push, so pair it with ref_name (the short
+  # branch name) -- github.ref would be "refs/heads/x" here and "x" there, and
+  # the two would never land in the same group.
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 
 jobs:
   security:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           # Nothing after the checkout talks to git, and the audit step runs a
           # third-party composite action in this same workspace.
@@ -43,21 +63,30 @@ jobs:
           ignore-vulns: GHSA-wj6h-64fc-37mp
 
   # The audit above (and the Docker build) are only as good as the lock files,
-  # so prove they are actually derived from pyproject.toml + requirements.txt:
+  # so prove they are still derivable from pyproject.toml + requirements.txt:
   # rerun the same compile the Makefile uses and fail on any difference.
   # `uv pip compile` reuses the versions already pinned in its output file, so
-  # this does not churn when PyPI merely publishes newer releases -- it only
-  # fails when the inputs changed (or the locks were edited by hand) without
-  # `make lock-requirements` being rerun.
+  # this does not churn when PyPI merely publishes newer releases -- it fails
+  # when the declared inputs changed without `make lock-requirements` being
+  # rerun, and when a lock names a version those inputs can no longer resolve
+  # to (a floor it does not satisfy, a package no longer declared anywhere).
+  #
+  # Scope, precisely: this detects drift from the declared inputs. It is not
+  # tamper-evidence. Because the compile treats the committed pins as
+  # preferences, hand-editing a lock to some *other* real release that still
+  # satisfies the declared floors is reproduced by the recompile and passes
+  # here. What makes a forged pin fail is --require-hashes in the audit step
+  # and the Docker build: a hash that does not match the artifact on PyPI is
+  # rejected at install time.
   lock-drift:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c  # v6.0.0
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
           python-version: '3.13'
 
