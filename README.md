@@ -133,6 +133,20 @@ make install
 make run
 ```
 
+### Dependency Locking
+
+Docker images and the CI vulnerability scan install from `requirements-lock.txt`
+and `requirements-dev-lock.txt` — hash-pinned locks compiled from
+`pyproject.toml` (constrained by `requirements.txt`). After changing
+dependencies in `pyproject.toml` or `requirements.txt`, regenerate them:
+
+```bash
+make lock-requirements
+```
+
+Commit the updated lock files with your change; CI fails if they drift from
+`pyproject.toml`.
+
 ## 🧩 Claude Desktop Integration
 
 YaraFlux is designed for seamless integration with Claude Desktop through the Model Context Protocol.
@@ -265,8 +279,10 @@ yaraflux_mcp_server/
 ├── entrypoint.sh                  # Container entrypoint script
 ├── Makefile                       # Build automation
 ├── pyproject.toml                 # Project metadata and dependencies
-├── requirements.txt               # Core dependencies
-└── requirements-dev.txt           # Development dependencies
+├── requirements.txt               # Core dependency floors (also constrains the locks)
+├── requirements-dev.txt           # Development dependency floors
+├── requirements-lock.txt          # Hash-pinned runtime lock (Docker build + security scan)
+└── requirements-dev-lock.txt      # Hash-pinned runtime + dev lock (test image + security scan)
 ```
 
 ## 🧪 Development

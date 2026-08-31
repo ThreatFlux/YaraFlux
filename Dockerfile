@@ -35,12 +35,17 @@ FROM base AS builder
 # Set working directory
 WORKDIR /app
 
-# Copy requirements file
-COPY requirements.txt /app/
+# Copy the hash-pinned lock file (regenerate with `make lock-requirements`)
+COPY requirements-lock.txt /app/
 
-# Install dependencies
-RUN pip install --no-cache-dir -U pip setuptools wheel && \
-    pip install --no-cache-dir -r requirements.txt
+# Install the locked dependency set. --require-hashes makes pip refuse any
+# package -- transitive dependencies included -- whose version or hash differs
+# from the lock file, so the image can never contain packages other than the
+# exact set CI resolved and audited (see .github/workflows/safety_scan.yml).
+# Note: no unpinned `pip install -U pip setuptools wheel` here -- that would
+# pull unverified packages past the lock. The base image's pip supports hash
+# checking, and nothing at runtime imports setuptools/wheel.
+RUN pip install --no-cache-dir --require-hashes -r requirements-lock.txt
 
 # Stage 2: Test stage
 FROM builder AS test
@@ -49,13 +54,14 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 # Install uv
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh  && \
     mv /root/.local/bin/uv /usr/local/bin/uv
-# Install test dependencies using uv
-COPY requirements.txt setup.py pyproject.toml README.md /app/
+# Install test dependencies from the same hash-pinned lock the builder uses
+# (requirements-dev-lock.txt = runtime set + the `dev` extra). The package
+# itself is installed --no-deps so nothing unpinned can slip in alongside it.
+COPY requirements-dev-lock.txt setup.py pyproject.toml README.md /app/
 COPY src/yaraflux_mcp_server /app/src/yaraflux_mcp_server
 RUN uv venv && \
-	uv pip install -e ".[dev]" \
-    && uv pip install -e ".[test]" \
-    && uv pip install PyJWT coverage black pylint mypy pytest pytest-cov pytest-mock
+    uv pip install --require-hashes -r requirements-dev-lock.txt && \
+    uv pip install --no-deps -e .
 
 # Copy test files and configs
 COPY tests/ /app/tests/

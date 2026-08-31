@@ -31,6 +31,18 @@ pip install -e .                # Basic installation
 pip install -e ".[dev]"        # Development installation
 ```
 
+For a reproducible environment matching the Docker image and CI security scan,
+install from the hash-pinned locks instead:
+```bash
+pip install --require-hashes -r requirements-lock.txt      # Runtime set
+pip install --require-hashes -r requirements-dev-lock.txt  # Runtime + dev set
+pip install --no-deps -e .
+```
+
+If you change dependencies in `pyproject.toml` or `requirements.txt`, run
+`make lock-requirements` and commit the regenerated lock files — CI fails when
+they drift.
+
 ## Method 2: Docker Installation
 
 ### 1. Build the Image
