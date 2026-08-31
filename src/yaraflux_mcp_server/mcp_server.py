@@ -39,12 +39,16 @@ from yaraflux_mcp_server.mcp_tools.scan_tools import scan_url as scan_url_func
 from yaraflux_mcp_server.mcp_tools.storage_tools import clean_storage as clean_storage_func
 from yaraflux_mcp_server.mcp_tools.storage_tools import get_storage_info as get_storage_info_func
 
-# Create an MCP server
+# Create an MCP server.
+# `title`/`description`/`version` were never real FastMCP parameters -- they
+# were swallowed by the **settings catch-all in mcp 1.3.x and silently
+# discarded. mcp >=1.10 replaced that catch-all with an explicit signature, so
+# passing them now raises TypeError at import. `instructions` is the supported
+# field that actually reaches the client; the version is read from package
+# metadata, not declared here (the hardcoded "0.1.0" was stale anyway).
 mcp = FastMCP(
     "YaraFlux",
-    title="YaraFlux YARA Scanning Server",
-    description="MCP server for YARA rule management and file scanning",
-    version="0.1.0",
+    instructions="MCP server for YARA rule management and file scanning",
 )
 
 
