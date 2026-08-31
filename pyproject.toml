@@ -44,7 +44,6 @@ dev = [
     "pylint>=3.0.0",
     "mypy>=1.8.0",
     "bandit>=1.7.0",
-    "safety>=3.0.0",
     "coverage>=7.6.12",
     "pre-commit>=3.6.0",
     "wheel>=0.45.0",
