@@ -1,4 +1,4 @@
-.PHONY: all clean install dev-setup test lint format build docker-build docker-run docker-test docker-coverage mypy security-check coverage run import-rules lock sync check-deps get-version bump-version
+.PHONY: all clean install dev-setup test lint format build docker-build docker-run docker-test docker-coverage mypy security-check coverage run import-rules lock lock-requirements sync check-deps get-version bump-version
 
 # Default target
 all: clean install test lint
@@ -132,10 +132,27 @@ dev-setup: install
 	@echo "Development setup complete."
 
 # Generate lockfile for reproducible builds
-lock:
+lock: lock-requirements
 	@echo "Generating lock file..."
 	$(UV) lock
 	@echo "Lock file generated."
+
+# Regenerate the hash-pinned requirement locks consumed by the Docker build
+# and the dependency vulnerability scan (.github/workflows/safety_scan.yml).
+# requirements.txt is passed as a constraints file so its operational pins
+# (bcrypt==4.3.0: passlib 1.7.4's bcrypt backend breaks on bcrypt>=5) carry
+# into the locks without duplicating them. Output is byte-deterministic for a
+# given uv version and lock state; CI's drift check pins uv, so use the same
+# version it does (see safety_scan.yml) if the check complains.
+lock-requirements:
+	@echo "Regenerating hash-pinned requirement locks from pyproject.toml..."
+	$(UV) pip compile pyproject.toml -c requirements.txt --universal --generate-hashes \
+		--python-version $(PYTHON_VERSION) --custom-compile-command "make lock-requirements" \
+		-o requirements-lock.txt
+	$(UV) pip compile pyproject.toml -c requirements.txt --all-extras --universal --generate-hashes \
+		--python-version $(PYTHON_VERSION) --custom-compile-command "make lock-requirements" \
+		-o requirements-dev-lock.txt
+	@echo "Requirement locks regenerated."
 
 # Sync dependencies from lockfile
 sync:
@@ -344,7 +361,8 @@ help:
 	@echo " check-deps : Check and install system dependencies"
 	@echo " install : Install dependencies in a virtual environment"
 	@echo " dev-setup : Set up development environment"
-	@echo " lock : Generate lock file for reproducible builds"
+	@echo " lock : Generate lock files for reproducible builds"
+	@echo " lock-requirements : Regenerate hash-pinned locks for Docker build and security scan"
 	@echo " sync : Sync dependencies from lock file"
 	@echo " test : Run tests"
 	@echo " coverage : Generate test coverage report"
