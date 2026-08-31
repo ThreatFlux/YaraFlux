@@ -137,8 +137,10 @@ make run
 
 Docker images and the CI vulnerability scan install from `requirements-lock.txt`
 and `requirements-dev-lock.txt` — hash-pinned locks compiled from
-`pyproject.toml` (constrained by `requirements.txt`). After changing
-dependencies in `pyproject.toml` or `requirements.txt`, regenerate them:
+`pyproject.toml` (constrained by `requirements.txt`). `pyproject.toml` is the
+single source of truth for dependencies: runtime ones under `dependencies`,
+development ones under the `dev` extra (`pip install -e ".[dev]"`). After
+changing dependencies there or in `requirements.txt`, regenerate the locks:
 
 ```bash
 make lock-requirements
@@ -278,9 +280,8 @@ yaraflux_mcp_server/
 ├── Dockerfile                     # Docker configuration
 ├── entrypoint.sh                  # Container entrypoint script
 ├── Makefile                       # Build automation
-├── pyproject.toml                 # Project metadata and dependencies
+├── pyproject.toml                 # Project metadata, runtime deps, and the `dev` extra
 ├── requirements.txt               # Core dependency floors (also constrains the locks)
-├── requirements-dev.txt           # Development dependency floors
 ├── requirements-lock.txt          # Hash-pinned runtime lock (Docker build + security scan)
 └── requirements-dev-lock.txt      # Hash-pinned runtime + dev lock (test image + security scan)
 ```

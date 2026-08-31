@@ -1,8 +1,19 @@
 name: Dependency Vulnerability Scan
-on: push
+# `push` alone never fires for a pull request opened from a fork, so the audit
+# and lock-drift gates below could not see exactly the contributions most in
+# need of them. `pull_request` runs both against the PR merge commit.
+on:
+  push:
+  pull_request:
 
 permissions:
   contents: read
+
+concurrency:
+  # A same-repo branch with an open PR fires both `push` and `pull_request`;
+  # collapse the pair so the same tree is not audited twice in parallel.
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   security:
@@ -43,12 +54,21 @@ jobs:
           ignore-vulns: GHSA-wj6h-64fc-37mp
 
   # The audit above (and the Docker build) are only as good as the lock files,
-  # so prove they are actually derived from pyproject.toml + requirements.txt:
+  # so prove they are still derivable from pyproject.toml + requirements.txt:
   # rerun the same compile the Makefile uses and fail on any difference.
   # `uv pip compile` reuses the versions already pinned in its output file, so
-  # this does not churn when PyPI merely publishes newer releases -- it only
-  # fails when the inputs changed (or the locks were edited by hand) without
-  # `make lock-requirements` being rerun.
+  # this does not churn when PyPI merely publishes newer releases -- it fails
+  # when the declared inputs changed without `make lock-requirements` being
+  # rerun, and when a lock names a version those inputs can no longer resolve
+  # to (a floor it does not satisfy, a package no longer declared anywhere).
+  #
+  # Scope, precisely: this detects drift from the declared inputs. It is not
+  # tamper-evidence. Because the compile treats the committed pins as
+  # preferences, hand-editing a lock to some *other* real release that still
+  # satisfies the declared floors is reproduced by the recompile and passes
+  # here. What makes a forged pin fail is --require-hashes in the audit step
+  # and the Docker build: a hash that does not match the artifact on PyPI is
+  # rejected at install time.
   lock-drift:
     runs-on: ubuntu-latest
     steps:

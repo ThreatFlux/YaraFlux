@@ -152,6 +152,15 @@ lock: lock-requirements
 # given uv version and lock state; CI's drift check pins uv, so use the same
 # version it does (see safety_scan.yml) if the check complains.
 lock-requirements:
+	@command -v $(UV) >/dev/null 2>&1 || { \
+		echo "error: '$(UV)' was not found on PATH."; \
+		echo "  'make lock-requirements' compiles the locks with uv and cannot run without it."; \
+		echo "  Install uv, then re-run. To match CI byte-for-byte, use the version"; \
+		echo "  pinned by the lock-drift job in .github/workflows/safety_scan.yml:"; \
+		echo "      pip install uv==<pinned-version>"; \
+		echo "  or, for a standalone install:  curl -LsSf https://astral.sh/uv/install.sh | sh"; \
+		exit 1; \
+	}
 	@echo "Regenerating hash-pinned requirement locks from pyproject.toml..."
 	$(UV) pip compile pyproject.toml -c requirements.txt --universal --generate-hashes \
 		--python-version $(PYTHON_VERSION) --custom-compile-command "make lock-requirements" \
